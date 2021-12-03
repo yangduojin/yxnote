@@ -14,9 +14,11 @@
 5. TIMED_WAITING
 6. TERMINATED
 
+![](/Jvav/img/threadState.jpg)
+
 #### Wait 和 Sleep的区别
 
-Wait 进入一个 Waiting 状态 释放锁,醒来要重新抢夺锁
+Wait 进入一个 Waiting 状态 释放重新抢夺锁
 
 Sleep 进入 TimeWaiting 状态 不释放锁
 

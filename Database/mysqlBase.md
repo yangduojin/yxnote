@@ -21,6 +21,17 @@
 
 如果只想要某些字段 不想要数据 就给出一个where不成立的结果 就不会存在数据
 
+
+复制数据到另一张表,表结构相同的表，且在同一数据库（如，table1,table2)（不同表结构也是如此）
+- Sql ：insert into table1 select * from table2 (完全复制)
+- insert into table1 select distinct * from table2(不复制重复纪录）
+- insert into table1 select top 5 * from table2 (前五条纪录)
+
+不在同一数据库中（如，db1 table1,db2 table2)
+- sql: insert into db1..table1 select * from db2..table2 (完全复制)
+- insert into db1..table1 select distinct * from db2table2(不复制重复纪录）
+- insert into tdb1..able1 select top 5 * from db2table2 (前五条纪录)
+
 位置 ：列级 vs 表级// 约束的分类
 
 数量 ：单列 vs 多列
@@ -186,16 +197,18 @@ Max/min/count/avg/sum 只适用数字,全都忽视null
 
 ![](img/mysqlBase.jpg)
 
+### B+树存放多少行数据
 
 InnoDB一棵B+树可以存放多少行数据？这个问题的简单回答是：约2千万
 
 磁盘扇区、文件系统、InnoDB存储引擎都有各自的最小存储单元。
 
-在计算机中磁盘存储数据最小单元是扇区，一个扇区的大小是512字节，而文件系统（例如XFS/EXT4）他的最小单元是块，一个块的大小是4k，而对于我们的InnoDB存储引擎也有自己的最小储存单元——页（Page），一个页的大小是16K。
 
-文件系统中一个文件大小只有1个字节，但不得不占磁盘上4KB的空间。
-
-innodb的所有数据文件（后缀为ibd的文件），他的大小始终都是16384（16k）的整数倍。
+- 在计算机中磁盘存储数据最小单元是扇区,一个扇区的大小是512字节
+- 文件系统（例如XFS/EXT4）他的最小单元是块一个块的大小是4k
+- InnoDB存储引擎也有自己的最小储存单元——页（Page），一个页的大小是16K。
+  - 文件系统中一个文件大小只有1个字节，但不得不占磁盘上4KB的空间。
+  - innodb的所有数据文件（后缀为ibd的文件），他的大小始终都是16384（16k）的整数倍。
 
 InnoDB存储引擎的最小存储单元是页，页可以用于存放数据也可以用于存放键值+指针，在B+树中叶子节点存放数据，非叶子节点存放键值+指针。
 

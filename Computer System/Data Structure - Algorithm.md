@@ -193,7 +193,7 @@ private static void quickSort2(int[] arr, int low, int high) {
             arr[high] = arr[low];
         }// 此时low = high
         arr[low] = tmp;// 将基准值放入正确的位置
-        return low; // 返回tmp的正确位置    }
+        return low; // 返回tmp的正确位置}}
 ```
 
 ## 二叉树(平衡 不平衡 )
