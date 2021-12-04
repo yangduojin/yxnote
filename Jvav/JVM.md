@@ -295,7 +295,7 @@ JNI(Java Native Interface)规范描述了用JNI Invocation API来加载或卸载
 ### 类装载器子系统
 
 这四者不是继承或父子关系，应该是包容的关系，只负责加载，能不能运行由执行引擎决定
-- 启动类加载器Bootstrap，虚拟机的启动就是通过它创建一个初始类来完成的，这个类是由虚拟机的具体实现指定的；
+- 启动类加载器BootstrapClassLoader，虚拟机的启动就是通过它创建一个初始类来完成的，这个类是由虚拟机的具体实现指定的；
 - 扩展类加载器ExtClassLoader
 - 应用程序类加载器AppClassLoader  也叫系统类加载器，加载当前应用的classpath的所有类.我们写的类用这个加载器
 - 用户自定义类加载器 是lang.ClassLoader的子类，用户可以自定义类的加载器
