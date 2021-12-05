@@ -27,3 +27,5 @@ Sleep 进入 TimeWaiting 状态 不释放锁
 并发 Concurrent 同时段或时间点多个访问，都要运行这段程序
 
 并行 Parallel 用下载来比喻，它把内容截取多份，然后分别  从n个点开始下载，最后拼在一起
+
+![](/Jvav/img/objectHeadMarkWord.png)
