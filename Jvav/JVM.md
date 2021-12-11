@@ -725,10 +725,10 @@ H表示Humongous。从字面上就可以理解表示大的对象（下面简称H
 
 ### 假如生产环境出现 CPU 过高，请谈谈你的分析思路和定位？
 
-- 先用 top 命令找出 CPU 占比最高的
+- 先用 top 命令找出 CPU 占比最高的进程pid
 - ps -ef 或者 jps 进一步定位，得知是一个怎么样的一个后台程序
 - 定位到具体的线程或代码
-  - ps -mp 11111 -o THREAD,tid,time
+  - ps -mp 进程id -o THREAD,tid,time
   - -m 显示所有的线程
   - -p 进程使用cpu的时间
   - -o 该参数后是用户自定义格式

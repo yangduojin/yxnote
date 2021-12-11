@@ -67,18 +67,34 @@
   - 先AOF
   - 后RDB
 
-# 过期key的实现
+# 删除策略
 - 惰性删除
 - 定时删除
-- 触发MaxMemory时尝试删除
+- 定期删除策略是前两种策略的折中：100s  
+  - 定期删除策略每隔一段时间执行一次删除过期键操作，并通过限制删除操作执行的时长和频率来减少删除操作对CPU时间的影响。
+  - 周期性轮询Redis库中的时效性数据，来用随机抽取的策略，利用过期数据占比的方式控制删除频度
+  - 特点1：CPU性能占用设置有峰值，检测频度可自定义设置
+  - 特点2：内存压力不是很大，长期占用内存的冷数据会被持续清理
+  - 总结：周期性抽查存储空间（随机抽查，重点抽查）
 
-# 缓存淘汰
+三种策略都有问题,需要一个兜底方案,所以**缓存淘汰**登场了
+
+## 缓存淘汰
 - ``volatile-lru(default)`` 从设置过期数据集里查找最近最少使用
+- ``volatile-lfu`` 对所有设置了过期时间的key使用LFU算法进行删除
 - ``volatile-ttl`` 从设置过期数据集里清理已经过期的key
 - ``volatile-random`` 从设置过期数据集里任意选择数据淘汰
-- ``allkeys-lru`` 从数据集中挑选最近最少使用的数据淘汰
+- ``allkeys-lfu`` 对所有key使用LFU算法进行删除 Least frequently used
+- ``allkeys-lru`` 从数据集中挑选最近最少使用的数据淘汰 Least frequently used
 - ``allkeys-random`` 从数据集中任意选择数据淘汰
 - ``no-enviction`` 不清理
+
+#### 如何配置，修改
+命令  
+- config set maxmemory-policy noeviction
+- config get maxmemory
+配置文件 - 配置文件redis.conf的maxmemory-policy参数
+
 
 # 缓存一致性
 1. ``write cache -> write db`` 写数据库失败时
