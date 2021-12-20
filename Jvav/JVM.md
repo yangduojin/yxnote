@@ -293,6 +293,7 @@ JNI(Java Native Interface)规范描述了用JNI Invocation API来加载或卸载
 
 ![](/Jvav/img/jvmBase.png)
 ![](/Jvav/img/jvmBase2.png)
+![](/Jvav/img/jvmBase3.png)
 
 ### 类装载器子系统
 

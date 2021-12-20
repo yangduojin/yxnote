@@ -8,8 +8,11 @@
     - [volatile和synchronized的比较](#volatile和synchronized的比较)
     - [synchronized和lock的区别](#synchronized和lock的区别)
   - [线程](#线程)
+    - [线程方法和对象方法](#线程方法和对象方法)
     - [线程状态](#线程状态)
+      - [blocked 和 waiting的区别](#blocked-和-waiting的区别)
       - [看线程的状态](#看线程的状态)
+      - [释放和不释放锁的操作](#释放和不释放锁的操作)
     - [线程获取锁对象和wait流程图](#线程获取锁对象和wait流程图)
     - [多线程口诀](#多线程口诀)
       - [交替打印1A2B3C4D 代码](#交替打印1a2b3c4d-代码)
@@ -24,6 +27,13 @@
       - [ThreadPoolExecutor 重要的7个参数](#threadpoolexecutor-重要的7个参数)
       - [4种拒绝策略: 都是 ThreadPoolExecutor 的静态内部类](#4种拒绝策略-都是-threadpoolexecutor-的静态内部类)
       - [自定义线程池](#自定义线程池)
+  - [分支合并框架](#分支合并框架)
+    - [异步回调](#异步回调)
+  - [异步编排CompletableFuture](#异步编排completablefuture)
+    - [发起异步的方式](#发起异步的方式)
+  - [总结代码](#总结代码)
+    - [实战代码](#实战代码)
+    - [另一种示范](#另一种示范)
 
 ## 概念详解
 
@@ -93,6 +103,23 @@ public void increment() {
 
 ## 线程
 
+### 线程方法和对象方法
+
+obj方法 wait(),notify(),notifyAll()
+
+对象方法
+
+- start():启动当前线程；调用当前线程的run()
+- run(): 通常需要重写Thread类中的此方法，将创建的线程要执行的操作声明在此方法中
+- currentThread():静态方法，返回执行当前代码的线程
+- getName():获取当前线程的名字
+- setName():设置当前线程的名字
+- yield():释放当前cpu的执行权
+- join():在线程a中调用线程b的join(),此时线程a就进入阻塞状态，直到线程b完全执行完以后，线程a才结束阻塞状态。
+- stop():已过时。当执行此方法时，强制结束当前线程。
+- sleep(long millitime):让当前线程“睡眠”指定的millitime毫秒。在指定的millitime毫秒时间内，当前线程是阻塞状态。
+- isAlive():判断当前线程是否存活
+
 ### 线程状态
 
 1. NEW
@@ -104,6 +131,38 @@ public void increment() {
 
 ![线程状态](/Jvav/img/threadState.jpg)
 
+#### blocked 和 waiting的区别
+
+blocked 和 waiting 是 Java 线程的两种阻塞状态。  
+因为争用 synchronized 的 monitor 对象而发生阻塞的线程处于 blocked 状态。  
+而 AQS(AbstractQueuedSynchronizer,是除了java自带的synchronized关键字之外的锁机制) 中的阻塞线程处于 waiting 状态。  
+
+两种状态的区别：  
+两种状态对应的场景的区别，源码中的注释已经讲的很清楚了。  
+但既然都是阻塞，还要分成这两种，除了场景不同外，肯定还有底层更深层次的原因。  
+个人认为更加本质的区别是，blocked 状态指的是进行系统调用，通过操作系统挂起线程后，线程的状态。  
+waiting 状态则不需要进行系统调用，是一种 JVM 层面的线程阻塞后的状态。由于转换到 blocked 状态需要进行系统调用，所以到这个状态的转换操作比较重。
+
+**抢夺锁对象**(wait / notify cooperate) ，synchronized(expression) {……}，expression是一个引用对象，抢的是这个对象的锁
+
+1. 抢到
+   - 对象满足线程执行条件，执行，完成后归还锁(锁就是监视器)
+   - 不满足条件
+     - 阻塞
+     - 退出归还锁 （进入该对象的wait set 中 waiting状态，等待另一个线程满足他的条件后(用回调?) notify或notifyAll来唤wait set中的一个或全部线程，醒来后再次竞争锁，抢到后从之前在同步块内暂停的位置恢复执行, 如果不进入waiting，得不到行的线程反复抢夺执行退出，成为忙等待 busy waiting）
+2. 没抢到，进入该对象的entry set中 blocked状态，等待锁的释放，再次抢夺
+
+线程进入waiting的原因 调用了这些方法
+
+- 不带时限的 Object.wait 方法
+- 不带时限的 Thread.join 方法
+- LockSupport.park
+- Join()有个隐式的 wait / notify（a中有个b.join(),a等待b执行完后，系统隐式通知a解除等待，恢复执行）
+
+不管是线程锁还是分布式锁，都实现了tryLock、lock、unlock三个方法。  
+tryLock的语义是非阻塞锁，尝试获取锁，成功返回true，不成功返回false；  
+主流lock语义是阻塞锁。实现一般基于tryLock来做自旋，不成功的时候也会有像ReentrantLock一样的阻塞操作。  
+
 #### 看线程的状态
 
 - jps 看进程的id号
@@ -112,6 +171,20 @@ public void increment() {
   - 线程调用wait,进入一个Waiting状态 释放锁，是阻塞状态
   - 当一个线程进入另一个线程已经获得synchronized锁的时候,此时这个线程会进入Blocked状态
   - 当一个线程进入另一个线程已经获得lock锁的时候,此时这个线程会进入Waiting状态
+
+#### 释放和不释放锁的操作
+
+释放锁的操作  
+
+- 当前线程的同步方法、同步代码块执行结束
+- 当前线程在同步代码块、同步方法中遇到break、return终止了该代码块、该方法的继续执行
+- 当前线程在同步代码块、同步方法中出现了未处理的Error或Exception，导致异常结束
+- 当前线程在同步代码块、同步方法中执行了线程对象的wait()方法，当前线程暂停，并释放锁
+
+不会释放锁的操作：
+
+- 线程执行同步代码块或同步方法时，程序调用Thread.sleep()、Thread.yield()方法暂停当前线程的执行
+- 线程执行同步代码块时，其他线程调用了该线程的suspend()方法将该线程挂起，该线程不会释放锁(同步监视器)，尽量避免使用suspend()或resume()来控制线程
 
 ### 线程获取锁对象和wait流程图
 
@@ -386,7 +459,217 @@ ex: 8核cpu: 8/(1-0.9) = 80.0 个线程数
 1. DiscardOldestPolicy()： 遗弃等待最久的，将当前任务加入队列，尝试提交当前任务
 
 #### 自定义线程池
+
+```java
 ExecutorService executorService = new ThreadPoolExecutor(2, 5, 2L, TimeUnit.SECONDS,new LinkedBlockingQueue<>(3), Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
 executorService.execute(() -> {
                     System.out.println(Thread.currentThread().getName() + "处理任务");});
 executorService.shutdown();
+```
+
+## 分支合并框架
+
+ForkJoinPool 类比 线程池  
+ForkJoinTask 类比 FutureTask  
+RecursiveTask 递归任务：继承后可以实现递归(自己调自己)调用的任务  
+
+```java
+class Fibonacci extends RecursiveTask<Integer> {
+   final int n;
+   Fibonacci(int n) { this.n = n; }
+   Integer compute() {
+     if (n <= 1)
+       return n;
+     Fibonacci f1 = new Fibonacci(n - 1);
+     f1.fork();
+     Fibonacci f2 = new Fibonacci(n - 2);
+     return f2.compute() + f1.join();}}
+```
+
+```java
+class MyTask extends RecursiveTask<Integer>{
+private static final Integer ADJUST_VALUE = 10;
+private int begin;
+private int end;
+private int result;
+public MyTask(int begin, int end) {
+    this.begin = begin;
+    this.end = end;}
+
+@Override
+protected Integer compute() {
+    if((end - begin)<=ADJUST_VALUE){
+        for(int i =begin;i <= end;i++){
+            result = result + i;
+        }
+    }else{
+        int middle = (begin + end)/2;
+        MyTask task01 = new MyTask(begin,middle);
+        MyTask task02 = new MyTask(middle+1,end);
+        task01.fork();
+        task02.fork();
+        result =  task01.join() + task02.join();
+    }
+    return result;}}
+
+public class ForkJoinDemo {
+public static void main(String[] args) throws Exception {
+    MyTask myTask = new MyTask(0,100);
+    ForkJoinPool forkJoinPool = new ForkJoinPool();
+    ForkJoinTask<Integer> forkJoinTask = forkJoinPool.submit(myTask);
+    System.out.println(forkJoinTask.get());
+    forkJoinPool.shutdown();}}
+```
+
+### 异步回调
+
+```java
+CompletableFuture completableFuture = new CompletableFuture<>();
+    CompletableFuture<Void> test = completableFuture.runAsync(() -> {
+        System.out.println(Thread.currentThread().getName() + "\t 没有返回结果");
+    });
+    test.get(); // 不会阻塞
+
+    CompletableFuture<Integer> test2 = completableFuture.supplyAsync(() -> {
+        System.out.println(Thread.currentThread().getName() + "\t 有返回结果");
+        int i = 1 / 0;
+        return 1024; // 会阻塞等待异步回调的结果
+    });
+    test2.whenComplete((t, u) -> {
+        System.out.println("***** t" + t);
+        System.out.println("***** Throwable u" + u);
+    }).exceptionally(f -> {
+        System.out.println("*** excption" + f.getMessage());
+        return 4444;
+}).get();
+```
+
+## 异步编排CompletableFuture
+
+都可以加后缀Async传入自己的线程池,如果不使用线程池,可能主线程执行完,支线程还没有执行完  
+异步新线程都会丢失原始请求的请求信息,从原始请求里面拿到信息添加到新线程里面  
+
+```java
+RequestAttributes attributes = RequestContextHolder.getRequestAttributes();主线程执行这个
+RequestContextHolder.setRequestAttributes(attributes);  新线程里面执行这个
+```
+
+### 发起异步的方式
+
+1. 第一种
+   - runAsync 没有返回值
+   - supplyAsync 有返回值,handle写在supp后面,决定执行完成后如何处理和返回值
+2. 第二种  
+   - whenComplete:类似于vue里面发起异步请求之后的then方法,不管是否有异常都会执行
+   - exceptionally:类似于vue里面发起异步请求之后的catch方法,感知异常,返回默认值,只有异常的时候才执行
+3. 第三种
+   - whenComplete,发起异步之后 执行是由main方法执行的
+   - whenCompleteAsync,发起异步之后 执行是由线程池去执行的
+4. 第四种串行化(后面多了Async可以实现异步请求，使用自己的线程池 主要是一种并行的)
+   - thenApply  一个线程依赖另一个线程,获取上一个任务返回的结果,并返回当前任务的返回值
+   - thenApplyAsync
+   - thenAccept 消费处理结果,接受任务的处理结果,并消费处理,无返回值
+   - thenAcceptAsync
+   - thenRun  只要上面的任务执行完成,就开始执行thenRun,只是处理完任务后,执行thenRun的后续操作 不能感知上一步的处理结果
+   - thenRunAsync
+   - thenAcceptAsync
+   - thenApplyAsync  
+5. 第五种双任务,都要完成
+   - thenCombine 组合两个future 获取两个future的返回结果,并返回当前任务的返回值
+   - thenAcceptBoth 组合两个future 获取两个future任务的返回结果,然后处理任务,没有返回值
+   - runAfterBoth  组合两个future,不需要获取future的结果,只需两个future处理完任务后处理该任务
+6. 第六种两任务组合,一个完成
+   - applyToEither:  两个任务有一个执行完成,获取它的返回值,处理任务并有新的返回值
+   - acceptEither: 两个任务有一个执行完成,获取它的返回值,处理任务,没有新的返回值
+   - runAfterEither: 两个任务有一个执行完成,不需要获取future的结果,处理任务,也没有返回值
+7. 多任务
+   - allOf: 等待所有任务完成
+   - anyOf:  只要有一个任务完成
+
+## 总结代码
+
+```java
+public class FutureDemo08 {
+    public static void main(String[] args) throws Exception {
+        thenApplyAsync();
+        SleepUtils.sleep(10);}
+    // 发起一个异步请求 串行执行
+    public static void thenApplyAsync() {
+        CompletableFuture<String> supplyAsync = CompletableFuture.supplyAsync(() -> {
+            System.out.println(Thread.currentThread().getName() + "你好supplyAsync");
+            SleepUtils.sleep(2);
+            return "0521";
+        });
+        supplyAsync.thenApplyAsync((String acceptVal) -> {
+            SleepUtils.sleep(2);
+            System.out.println(Thread.currentThread().getName() + "第一个线程thenAccept拿到值" + acceptVal);
+            return acceptVal + "apply2";
+        }, MyExecutor.getInstance());
+        supplyAsync.thenApplyAsync((String acceptVal) -> {
+            SleepUtils.sleep(2);
+            System.out.println(Thread.currentThread().getName() + "第二个线程thenAccept拿到值" + acceptVal);
+            return acceptVal + "apply2";
+        }, MyExecutor.getInstance());}}
+```
+
+### 实战代码
+
+```java
+public String getSkuDetail(@PathVariable Long skuId, Model model){
+    Map<String, Object> map = new HashMap<>();
+    CompletableFuture<Void> priceFuture = CompletableFuture.runAsync(() -> {
+        BigDecimal skuPrice = productFeignClient.getSkuPrice(skuId);
+        map.put("price", skuPrice);
+    }, MyExecutor.getInstance());
+    // 两种线程池都一样
+    CompletableFuture<SkuInfo> skuInfoFuture = CompletableFuture.supplyAsync(() -> {
+        SkuInfo skuInfo = productFeignClient.getSkuInfo(skuId);
+        map.put("skuInfo", skuInfo);
+        return skuInfo;
+    },MyExecutor.getInstance());
+    CompletableFuture<Void> skuInfoCompletableFuture = skuInfoFuture.thenAcceptAsync((skuInfo) -> {
+        BaseCategoryView categoryView = productFeignClient.getCategoryView(skuInfo.getCategory3Id());
+        map.put("categoryView",categoryView);
+    }, threadPoolExecutor);
+    CompletableFuture<Void> spuSalePropertyListFuture = skuInfoFuture.thenAcceptAsync((skuInfo) -> {
+        List<ProductSalePropertyKey> skuSalePropertyKeyAndValueList = productFeignClient.getSkuSalePropertyKeyAndValue(skuInfo.getProductId(), skuId);
+        map.put("spuSalePropertyList", skuSalePropertyKeyAndValueList);
+    }, threadPoolExecutor);
+    CompletableFuture<Void> salePropertyValueIdJson = skuInfoFuture.thenAcceptAsync((skuInfo) -> {
+        Map salePropertyValueIdMap = productFeignClient.getSkuSalePropertyValueId(skuInfo.getProductId());
+        map.put("salePropertyValueIdJson", JSON.toJSONString(salePropertyValueIdMap));
+    }, threadPoolExecutor);
+    CompletableFuture.allOf(priceFuture,skuInfoFuture,spuSalePropertyListFuture,skuInfoCompletableFuture,salePropertyValueIdJson).join();
+    model.addAllAttributes(map);
+    
+    return "detail/index";}
+```
+
+### 另一种示范
+
+```java
+        List<String> warningInfoList = new ArrayList<>();
+        // 声明一个CompletableFuture 集合
+        List<CompletableFuture> multiFutureList = new ArrayList<>();
+        List<OrderDetail> orderDetailList = orderInfo.getOrderDetailList();
+        if(!CollectionUtils.isEmpty(orderDetailList)){
+//            Map<Long, BigDecimal> collect = orderDetailList.stream().collect(Collectors.toMap(OrderDetail::getSkuId, OrderDetail::getOrderPrice));
+//            List<Long> skusPrice = cartFeignClient.getSkusPrice(collect, orderInfo.getUserId());
+            for (OrderDetail orderDetail : orderDetailList) {
+                Long skuId = orderDetail.getSkuId();
+                String skuNum = orderDetail.getSkuNum();
+                CompletableFuture<Void> checkStockFuture = CompletableFuture.runAsync(() -> {
+                    String retVal = HttpClientUtil.doGet("http://localhost:8100/hasStock?skuId=" + skuId + "&num=" + skuNum);
+                    //代表库存不足
+                    if (!retVal.equals("1")) {
+                        warningInfoList.add(orderDetail.getSkuName() + "库存不足！");
+                    }
+                },threadPoolExecutor);
+                multiFutureList.add(checkStockFuture);
+            }
+        }
+        CompletableFuture[] multiFutureArray = new CompletableFuture[multiFutureList.size()];
+        // 将异步编排的多个对象进行整合
+        CompletableFuture.allOf(multiFutureList.toArray(multiFutureArray)).join();
+    return warningInfoList;
+```
