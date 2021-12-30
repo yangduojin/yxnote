@@ -1,6 +1,11 @@
+# IDEA 常用模板
+
+## 获取线程名
+
 - mythread Thread.currentThread().getName()
   
-test
+## 测试 test
+
 ```java
 @Test
 public void test$var1$(){
@@ -8,7 +13,8 @@ public void test$var1$(){
 }
 ```
 
-tsleep
+## 线程睡眠 tsleep
+
 ```java
 try {TimeUnit.SECONDS.sleep($var1$);} catch (Exception e) {e.printStackTrace();}
     $var2$
