@@ -1,5 +1,12 @@
 # IO
 
+- [IO](#io)
+  - [File类](#file类)
+    - [流的类别](#流的类别)
+    - [流的类别总结](#流的类别总结)
+
+## File类
+
 File类的一个对象，代表一个文件或一个文件目录(俗称：文件夹)
 File类中涉及到关于文件或文件目录的创建、删除、重命名、修改时间、文件大小等方法，
 并未涉及到写入或读取文件内容的操作。如果需要读取或写入文件内容，必须使用IO流来完成。
@@ -37,4 +44,46 @@ public boolean mkdirs();// 存在则不创建，上层目录不存则一起创�
 
 public boolean delete();// 删除文件或文件夹，不走回收站，删除目录里面不能有文件或目录
 
+### 流的类别
+
+| 分类       | 字节输入流              | 字节输出流               | 字符输入流            | 字符输出流             |
+| ---------- | ----------------------- | ------------------------ | --------------------- | ---------------------- |
+| 抽象基类   | **InputStream**         | **OutputStream**         | **Reader**            | **Writer**             |
+| 访问文件   | **FileInputStream**     | **FileOutputStream**     | **FileReader**        | **FileWriter**         |
+| 访问数组   | ByteArrayInputStream    | ByteArrayOutputStream    | CharArrayReader       | CharArrayWriter        |
+| 访问管道   | PipedInputStream        | PipedOutputStream        | PipedReader           | PipedWriter            |
+| 访问字符串 |                         |                          | StringReader          | StringWriter           |
+| 缓冲流     | **BufferedInputStream** | **BufferedOutputStream** | **BufferedReader**    | **BufferedWriter**     |
+| 转换流     |                         |                          | **InputStreamReader** | **OutputStreamWriter** |
+| 对象流     | **ObjectInputStream**   | **ObjectOutputStream**   |                       |                        |
+|            | FilterInputStream       | FilterOutputStream       | FilterReader          | FilterWriter           |
+| 打印流     |                         | PrintStream              |                       | PrintWriter            |
+| 推回输入流 | PushbackInputStream     |                          | PushbackReader        |                        |
+| 特殊流     | DataInputStream         | DataOutputStream         |                       |                        |
+
 ![io流的类别](/Jvav/img/ioStreamCategory.png)
+
+### 流的类别总结
+
+| 抽象基类     | 节点流(或文件流)                              | 缓冲流(处理流的一种)                                       |
+| ------------ | --------------------------------------------- | ---------------------------------------------------------- |
+| InputStream  | FileInputStream (read(byte[] buffer))         | bufferedInputStream(read(byte[] buffer))                   |
+| OutputStream | FileOutputStream (write(byte[] buffer,0,len)) | bufferedOutputStream(write(byte[] buffer,0,len) / flush()) |
+| Reader       | FileReader(read(char[]cbuf))                  | BufferedReader(read(char[]cbuf) / readLine())              |
+| writer       | FileWriter(write (char[] cbuf,0,len))         | BufferedWriter(write(char[] cbuf,0,len) / flush())         |
+
+输入过程
+
+1. 创建File类的对象，指明读取的数据的来源。（要求此文件一定要存在）
+1. 创建相应的输入流，将File类的对象作为参数，传入流的构造器中
+1. 具体的读入过程：创建相应的byte[] 或 char[]。
+1. 关闭流资源
+说明：程序中出现的异常需要使用try-catch-finally处理。
+
+输出过程
+
+1. 创建File类的对象，指明写出的数据的位置。（不要求此文件一定要存在）
+1. 创建相应的输出流，将File类的对象作为参数，传入流的构造器中
+1. 具体的写出过程： write(char[]/byte[] buffer,0,len)
+1. 关闭流资源
+说明：程序中出现的异常需要使用try-catch-finally处理。

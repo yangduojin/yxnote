@@ -1,3 +1,5 @@
+# Linux
+
 ## 性能查看
 
 ### 整机
@@ -10,15 +12,17 @@ top 查看整机信息
 
 uptime [top的精简版]
 
-### cpu 
+### cpu
 
 - vmstat -n 2 3 采样cpu等信息,每2秒一次,一共3次
 
 procs
+
 - r：运行和等待的CPU时间片的进程数，原则上1核的CPU的运行队列不要超过2，整个系统的运行队列不超过总核数的2倍，否则代表系统压力过大，我们看蘑菇博客测试服务器，能发现都超过了2，说明现在压力过大
 - b：等待资源的进程数，比如正在等待磁盘I/O、网络I/O等
 
 cpu
+
 - us：用户进程消耗CPU时间百分比，us值高，用户进程消耗CPU时间多，如果长期大于50%，优化程序
 - sy：内核进程消耗的CPU时间百分比
 - us + sy 参考值为80%，如果us + sy 大于80%，说明可能存在CPU不足，从上面的图片可以看出，us + sy还没有超过百分80，因此说明蘑菇博客的CPU消耗不是很高
@@ -64,7 +68,7 @@ pidstat -d 2 -p 5101
 
 ### 网络IO查看 ifstat l
 
-```
+```log
 wget http://gael.roualland.free.fr/lifstat/ifstat-1.1.tar.gz
 tar -xzvf ifstat-1.1.tar.gz
 cd ifstat-1.1
@@ -103,7 +107,8 @@ make install
 - jstack **进程ID** | grep tid（16进制**线程ID**小写英文）-A60
 
 将会打印是那个类多少行代码导致的问题
-```
+
+```log
 ps - process status
 -A Display information about other users’ processes, including those without controlling terminals.
 
@@ -113,7 +118,6 @@ ps - process status
 ```
 
 [对于JDK自带的JVM监控和性能分析工具用过哪些?一般你是怎么用的?](https://blog.csdn.net/u011863024/article/details/106651068)
-
 
 下表是Sun JDK监控和故障处理工具
 
@@ -125,6 +129,3 @@ ps - process status
 | jmap   | Memory Map for Java，生成虚拟机的内存转储快照（Heapdump文件）                                            |
 | jhat   | JVM Heap Dump Browser，用于分析heapdump文件，它会建立一个HTTP/HTML服务器，让用户可以在浏览器上查看分析结 | 果 |
 | jstack | Stack Trace for Java，显示虚拟机的线程快照                                                               |
-
-
-
