@@ -1,4 +1,29 @@
-# 数据结构
+# Redis
+
+- [Redis](#redis)
+  - [数据结构](#数据结构)
+    - [SDS 简单动态字符串](#sds-简单动态字符串)
+    - [Ziplist压缩列表](#ziplist压缩列表)
+    - [linkedList(淘汰)](#linkedlist淘汰)
+    - [intset整数集合](#intset整数集合)
+    - [dict](#dict)
+    - [quicklist](#quicklist)
+    - [skiptable 跳跃表](#skiptable-跳跃表)
+  - [持久化](#持久化)
+  - [删除策略](#删除策略)
+    - [缓存淘汰](#缓存淘汰)
+      - [如何配置，修改](#如何配置修改)
+    - [缓存一致性](#缓存一致性)
+      - [避免脏数据](#避免脏数据)
+      - [结论](#结论)
+      - [选择](#选择)
+  - [穿透 & 雪崩 & 击穿](#穿透--雪崩--击穿)
+  - [分布式锁](#分布式锁)
+  - [redlock](#redlock)
+  - [事务](#事务)
+
+## 数据结构
+
 1. ``String``
    - SDS
 2. ``List`` 队列结构
@@ -12,44 +37,53 @@
    - Dict
 5. ``Sorted Set``
    - Hash + SkipTable
-- Stream流
-  - RadixTree
-- bitmap 位图
-- pubsub
-- geo 地理位置
-- hyperloglog 基数统计
+6. Stream流
+   - RadixTree
+7. bitmap位图
+8. pubsub
+9. geo地理位置
+10. hyperloglog基数统计
 
-## SDS 简单动态字符串
+### SDS 简单动态字符串
+
 空间换时间
 
-## Ziplist压缩列表
+### Ziplist压缩列表
+
 - 连续内存
 - 特殊编码
 - 节省内存
 - 时间换空间
 
-## linkedList(淘汰)
+### linkedList(淘汰)
 
-## intset整数集合
+### intset整数集合
+
 - 当value是数字
 - 当size没有超过阈值
   - 数组项从小到大排序
   - 二分查找
 - 时间换空间
 
-## dict
-![](/Database/img/redisDict.png)
+### dict
+
+![redisDict](/Database/img/redisDict.png)
+
 - 渐进式rehash
 - murmurhash
 
-## quicklist
-![](/Database/img/redisQuicklist.png)
+### quicklist
+
+![redisQuicklist](/Database/img/redisQuicklist.png)
+
 - 链表和ziplist的组合
 
-## skiptable 跳跃表
-![](/Database/img/redisSkiptable.png)
+### skiptable 跳跃表
 
-# 持久化
+![redisSkiptable](/Database/img/redisSkiptable.png)
+
+## 持久化
+
 - RDB
   - 会丢失一部分最新数据
   - 每个redis实例只会存一份rdb文件
@@ -67,7 +101,8 @@
   - 先AOF
   - 后RDB
 
-# 删除策略
+## 删除策略
+
 - 惰性删除
 - 定时删除
 - 定期删除策略是前两种策略的折中：100s  
@@ -79,7 +114,8 @@
 
 三种策略都有问题,需要一个兜底方案,所以**缓存淘汰**登场了
 
-## 缓存淘汰
+### 缓存淘汰
+
 - ``volatile-lru(default)`` 从设置过期数据集里查找最近最少使用
 - ``volatile-lfu`` 对所有设置了过期时间的key使用LFU算法进行删除
 - ``volatile-ttl`` 从设置过期数据集里清理已经过期的key
@@ -90,59 +126,67 @@
 - ``no-enviction`` 不清理
 
 #### 如何配置，修改
-命令  
-- config set maxmemory-policy noeviction
+
+- 命令 config set maxmemory-policy noeviction
 - config get maxmemory
 配置文件 - 配置文件redis.conf的maxmemory-policy参数
 
+### 缓存一致性
 
-# 缓存一致性
 1. ``write cache -> write db`` 写数据库失败时
 2. ``write db -> write cache`` 更新cache失败,并发出现脏数据
 3. ``evict cache -> write db`` 延迟,并发出现脏数据
 4. ``write db -> evict cache`` 并发出现脏数据
 5. ``evict cache -> write db -> evict cache`` 减少脏数据概率
-## 避免脏数据
+
+#### 避免脏数据
+
 - ttl
 - 定时更新
 - Binlog订阅更新
 - Delay Queue
 
-### 结论
+#### 结论
+
 - 难以保证强一致
 - 最终一致性
 - 拼概率,减少脏数据的可能性
-### 选择
+
+#### 选择
+
 - evict cache -> write db;binlog or ttl 双写
   - 多数公司的选择
 - write db -> binlog更新
   - didi
 - write db -> evict cache 也是好选择
   
-# 穿透 & 雪崩
-- 穿透: 访问一个不存在的key
-  - 在缓存中加入该key的null值,设置短期过期
-- 雪崩 大量key失效
-  - 随机ttl
-## 击穿
-- 击穿 大量请求未缓存的key
-  - redis分段锁,同样的请求争夺一把锁
-  - 一个去数据库查,其余的自旋100ms
-  - 再去缓存读取,如果依然不存在尝试去数据库拿
+## 穿透 & 雪崩 & 击穿
 
-# 分布式锁
+1. 穿透: 访问一个不存在的key
+   - 在缓存中加入该key的null值,设置短期过期
+2. 雪崩 大量key失效
+   - 随机ttl
+3. 击穿 大量请求未缓存的key
+   - redis分段锁,同样的请求争夺一把锁
+   - 一个去数据库查,其余的自旋100ms
+   - 再去缓存读取,如果依然不存在尝试去数据库拿
+
+## 分布式锁
+
 lua make (compare and set)
 
 ``set + nx + ex`` 原子性只有一个能拿到锁
 
-# redlock
+## redlock
+
 - 2/n + 1
 - 推荐
   - 最少5个实例
   - 3个及以上拿到锁
   - 未拿到锁的释放锁
 
-# 事务
+## 事务
+
 - MULTI
 - EXEC
 - DISCARD

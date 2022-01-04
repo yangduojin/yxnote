@@ -1,7 +1,22 @@
-### DDL
+# mysql 基础
+
+- [mysql 基础](#mysql-基础)
+  - [DDL](#ddl)
+  - [DCL](#dcl)
+  - [DML / DQL](#dml--dql)
+    - [Like 搭配通配符](#like-搭配通配符)
+    - [比较运算符](#比较运算符)
+      - [非符号运算符](#非符号运算符)
+      - [逻辑运算符](#逻辑运算符)
+      - [JOIN / inner / outer  / union set / difference set](#join--inner--outer---union-set--difference-set)
+        - [两者的区别](#两者的区别)
+    - [B+树存放多少行数据](#b树存放多少行数据)
+
+## DDL
+
 ``create`` ``alter``  ``drop``  ``rename``  ``truncate`` 都自动提交 `commit` 且不受 ``set autocommit = false`` 影响, ``rollback`` 对DDL操作都失效
 
-``create database if not exists xxx ``
+``create database if not exists xxx``
 
 ``drop database|table if exists xxx``
 
@@ -21,13 +36,14 @@
 
 如果只想要某些字段 不想要数据 就给出一个where不成立的结果 就不会存在数据
 
-
 复制数据到另一张表,表结构相同的表，且在同一数据库（如，table1,table2)（不同表结构也是如此）
+
 - Sql ：insert into table1 select * from table2 (完全复制)
 - insert into table1 select distinct * from table2(不复制重复纪录）
 - insert into table1 select top 5 * from table2 (前五条纪录)
 
 不在同一数据库中（如，db1 table1,db2 table2)
+
 - sql: insert into db1..table1 select * from db2..table2 (完全复制)
 - insert into db1..table1 select distinct * from db2table2(不复制重复纪录）
 - insert into tdb1..able1 select top 5 * from db2table2 (前五条纪录)
@@ -36,17 +52,21 @@
 
 数量 ：单列 vs 多列
 
-功能 ：not null | unique | primary key | auto increment | foreign | check| default 
+功能 ：not null | unique | primary key | auto increment | foreign | check| default
 
 ``ALTER TABLE emp4 DROP INDEX emp4_email_uk``
 
 ``ALTER TABLE emp4 ADD CONSTRAINT emp4_email_uk UNIQUE(id)``
 
-### DCL
+## DCL
+
 ``commit`` ``rollback`` ``grant`` ``revoke`` ``savepoint``
 
-### DML / DQL
-``insert``  ``delete``  ``update`` 逻辑删除,自增继续,会返回受影响的行数,支持回滚，``truncate table ``真删除 自增不会 不会返回受影响的行数，不支持回滚
+## DML / DQL
+
+``insert``  ``delete``  ``update`` 逻辑删除,自增继续,会返回受影响的行数,支持回滚
+
+``truncate table``真删除 自增不会 不会返回受影响的行数，不支持回滚
 
 ``if(条件，表达式1，表达式2)``
 
@@ -76,11 +96,13 @@ ELSE 'F'
 END "gradeyx"
 FROM employees;
 ```
+
 IF(expr1,expr2,expr3) , IFNULL(expr1,expr2) , isnull(expr)
 
 ifnull(字段,表达式)version() ,user(),database(),in(),not in(),between,not between(),
 
-#### Like 搭配通配符  
+### Like 搭配通配符
+
 ``_`` 任意单个字符 ``__a``, ``a_``
 
 ``%`` 任意多个字符  ``%a%``    ``%a``    ``a%``
@@ -90,11 +112,13 @@ ifnull(字段,表达式)version() ,user(),database(),in(),not in(),between,not b
 ```Select * from employee where last_name like 'a%';'____e%';'_$_%' escape '$';``` $开始的一个字符被省略,转义
 
 ### 比较运算符
+
 ``<>`` 判断两个值,字符串,表达式是否不相等
 
 ``<=>`` 安全的判断两个值,字符串,表达式是否相等
 
-##### 非符号运算符
+#### 非符号运算符
+
 | 运算符      | 作用                           | 示例                                   |
 | ----------- | ------------------------------ | -------------------------------------- |
 | is null     | 值,字符串,表达式是否为空       | select b from table where a is null    |
@@ -109,7 +133,8 @@ ifnull(字段,表达式)version() ,user(),database(),in(),not in(),between,not b
 | regexp      | 值是否符合正则表达式的规则     | where a regexp b                       |
 | rlike       | 值是否符合正则表达式的规则     | where a rlike b                        |
 
-##### 逻辑运算符
+#### 逻辑运算符
+
 | 运算符     | 作用     | 示例           |
 | ---------- | -------- | -------------- |
 | not 或 !   | 逻辑非   | select not a   |
@@ -119,9 +144,10 @@ ifnull(字段,表达式)version() ,user(),database(),in(),not in(),between,not b
 
 一起用 ``and`` 优先级高于 ``or``
 
+![sevenJoin](img/sevenJoin.png)
 
-![](img/sevenJoin.png)
-##### JOIN / inner / outer  / union set / difference set
+#### JOIN / inner / outer  / union set / difference set
+
 ```sql
 //INNER JOIN
 select * from a inner join b on a.key=b.key
@@ -149,13 +175,14 @@ union(去重)
 select * from a right join b on a.key=b.key(找出B的所有)
 
 // 差集difference SET  union会去重,速度慢,UNION All不会去重,速度快
-select * from a full outer join b on a.key=b.key where a.key is null 	or b.key is null
+select * from a full outer join b on a.key=b.key where a.key is null or b.key is null
 mysql不支持上面的
 
 select * from Table A left join Table B on A.Key = B.Key where B.Key is null(找出A的独有)
 union(去重,排序)
 select * from Table A right join Table B on A.Key = B.Key where A.Key is null(找出B的独有)
 ```
+
 多条待联合的查询语句的查询列数必须一致，查询类型，字段意义最好一致;
 
 union 需要两条或以上的select语句组成
@@ -164,7 +191,7 @@ union 需要两条或以上的select语句组成
 
 列数据类型必须兼容:类型不需完全相同，但必须是DBMS可以隐式转换的类型
 
-**两者的区别**
+##### 两者的区别
 
 对重复结果的处理：UNION会去掉重复id记录，以第一个id为准，UNION ALL不会；
 
@@ -174,7 +201,7 @@ union 需要两条或以上的select语句组成
 
 | 执行顺序 |
 | -------- |
-7 Select 查询列表 
+7 Select 查询列表
 1 From 表名1 别名
 2 join 表名2 别名
 3 on 连接条件
@@ -182,27 +209,23 @@ union 需要两条或以上的select语句组成
 5 Group by 分组 + WITH ROLLUP,对分组之后的组函数进行求和
 6 Having 分组后筛选
 8 Order by 排序列表
-9 limit (page - 1)*size,size 
+9 limit (page - 1)*size,size
 
 过滤条件1有组函数，过滤条件1声明在having中 Having 先遍历再过滤
 
 过滤条件2无组函数，推荐过滤条件2声明在where中 Where 遍历时就在过滤
 
-
-
-
 select count(distinct 字段) from 表
 
 Max/min/count/avg/sum 只适用数字,全都忽视null
 
-![](img/mysqlBase.jpg)
+![mysqlBase](img/mysqlBase.jpg)
 
 ### B+树存放多少行数据
 
 InnoDB一棵B+树可以存放多少行数据？这个问题的简单回答是：约2千万
 
 磁盘扇区、文件系统、InnoDB存储引擎都有各自的最小存储单元。
-
 
 - 在计算机中磁盘存储数据最小单元是扇区,一个扇区的大小是512字节
 - 文件系统（例如XFS/EXT4）他的最小单元是块一个块的大小是4k
@@ -222,5 +245,3 @@ InnoDB存储引擎的最小存储单元是页，页可以用于存放数据也�
 
 简单版本回答是：
 因为B树不管叶子节点还是非叶子节点，都会保存数据，这样导致在非叶子节点中能保存的指针数量变少（有些资料也称为扇出），指针少的情况下要保存大量数据，只能增加树的高度，导致IO操作变多，查询性能变低；
-
-
