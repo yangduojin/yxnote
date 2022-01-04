@@ -1,6 +1,17 @@
 # Http&Https
 
 - [Http&Https](#httphttps)
+  - [TCP/IP](#tcpip)
+    - [TCP/IP协议栈](#tcpip协议栈)
+    - [三次握手,4次挥手](#三次握手4次挥手)
+    - [长连接和短连接各自的优缺点](#长连接和短连接各自的优缺点)
+      - [短连接应用场景](#短连接应用场景)
+      - [长连接应用场景](#长连接应用场景)
+    - [keepalive保活机制](#keepalive保活机制)
+      - [如何设置](#如何设置)
+      - [在Linux内核设置](#在linux内核设置)
+      - [使用Netty4设置](#使用netty4设置)
+      - [使用的场景](#使用的场景)
   - [red服务从前端调用gray服务时报错：跨域错误。经排查确认由于http的域名下从前端调用https导致](#red服务从前端调用gray服务时报错跨域错误经排查确认由于http的域名下从前端调用https导致)
     - [1、为什么会发生问题？](#1为什么会发生问题)
     - [2、为什么没有做跨域处理？](#2为什么没有做跨域处理)
@@ -20,20 +31,155 @@
     - [要求各个团队梳理域名是否存在证书将要到期的安全风险。怎么来给团队下发具体任务呢？](#要求各个团队梳理域名是否存在证书将要到期的安全风险怎么来给团队下发具体任务呢)
 
 ![OSIModel](img/OSIModel.png)
+![socket](./img/socket.png)
+![socketInfo](./img/socketInfo.png)
 
-| Host&Media   | DATA     | OSI Model Layer                                           | TCP/IP            | TCP/IP & protocol    |
-| ------------ | -------- | --------------------------------------------------------- | ----------------- | -------------------- |
-| Host Layers  | Data     | **Application** network Process to Application            | Application       | Http,FTP,Telnet,DNS. |
-| Host Layers  | Data     | **Presentation** Data Representation and Encryption       | Application       | Http,FTP,Telnet,DNS. |
-| Host Layers  | Data     | **Session** Interhost Communication                       | Application       | Http,FTP,Telnet,DNS. |
-| Host Layers  | Segments | **Transport** End-to-End Connections and Reliability      | Transport         | TCP,UDP.             |
-| Media Layers | Packets  | **NetWork** Path Determination and IP(Logical Addressing) | Network           | IP,ICMP,ARP          |
-| Media Layers | Frames   | **DataLink** MAC and LLC (Physical Addressing)            | Physical&DataLink | Link                 |
-| Media Layers | Bits     | **Physical** Media,Signal,and Binary Transmission         | Physical&DataLink | Link                 |
+TCP/IP四层模型里缺少咱们平时工作中常用的RPC远程过程调用协议，它工作在会话层，基于上图中的socket来实现。
+
+| Host&Media   | DATA     | OSI Model Layer                                           | TCP/IP            | TCP/IP & protocol             |
+| ------------ | -------- | --------------------------------------------------------- | ----------------- | ----------------------------- |
+| Host Layers  | Data     | **Application** network Process to Application            | Application       | Http,FTP,Telnet,DNS,ping,OSPF |
+| Host Layers  | Data     | **Presentation** Data Representation and Encryption       | Application       | Http,FTP,Telnet,DNS,ping,OSPF |
+| Host Layers  | Data     | **Session** Interhost Communication                       | Application       | Http,FTP,Telnet,DNS,ping,OSPF |
+| Host Layers  | Segments | **Transport** End-to-End Connections and Reliability      | Transport         | TCP,UDP.                      |
+| Media Layers | Packets  | **NetWork** Path Determination and IP(Logical Addressing) | Network           | IP,ICMP                       |
+| Media Layers | Frames   | **DataLink** MAC and LLC (Physical Addressing)            | Physical&DataLink | ARP,DataLink,RARP             |
+| Media Layers | Bits     | **Physical** Media,Signal,and Binary Transmission         | Physical&DataLink | ARP,DataLink,RARP             |
 
 ![TCP&UDP](./img/TCP&UDP.png)
+
+## TCP/IP
+
+### TCP/IP协议栈
+
+栈是一种先进后出的数据结构。拿一个HTTP报文来说，HTTP报文属于应用层协议的报文，我们输入网址，首先会调用到DNS协议（域名协议）。HTTP报文在传输层用的是TCP协议，我们把TCP压入栈中，再将IP层也压入栈中。链路层的话，就用最常见的以太网。
+
+现在我们的栈里面从头至尾依次是：HTTP协议-TCP协议-IP协议-以太帧头
+
+然后我们先忽略最底层的物理层，假设这个封装好的栈一样的报文漂洋过海，来到了它的目的地。对端收到这个报文以后，也就是我们封装好的这个栈一样的东西以后该怎么办呢？会不会也是先拿HTTP呢？因为这个报文是我们构造的一个栈，所以说它的顺序肯定也是栈。
+
+因此拿取的顺序就是：以太帧头-IP协议-TCP协议-HTTP协议
+
+传输层操作是在内核空间完成的，就是说不是靠咱们平时的应用编码可以直接介入的。咱们平时直接用的就是应用层协议。想通过应用层操作传输层怎么办呢？这就用到了socket编程。因为HTTP协议的内容被封装进入了socket。这里称为套接字层。总体示意图如下：
+
+![报文结构](./img/messageStructure.png)
+
+### 三次握手,4次挥手
+
 ![TCP3confirm](./img/tcp3confirm.png)
 ![TCP4confirm](./img/tcp4confirm.png)
+
+### 长连接和短连接各自的优缺点
+
+![longConnection&shortConnection](./img/longConnection&shortConnection.png)
+
+- 长连接可以省去较多的TCP建立和关闭的操作，减少浪费，节约时间，但是一直连接对于客户端来说比较耗电。
+- 对于频繁请求资源的客户端来说，较适用长连接。
+- 客户端与服务端之间的连接如果一直不关闭的话，会存在一个问题：随着客户端连接越来越多，服务端早晚有扛不住的时候，这时候服务端需要采取一些策略，如关闭一些长时间没有读写事件发生的连接，这样可以避免一些恶意连接导致服务端服务受损。
+- 如果条件再允许就可以以客户端机器为颗粒度，限制每个客户端的最大长连接数，这样可以完全避免某些客户端出问题后连累服务端。
+- 短连接对于服务器来说管理较为简单，存在的连接都是有用的连接，不需要额外的控制手段。
+- 一次TCP连接和断开需要7个来回，如果客户端请求频繁，将在TCP的建立和关闭操作上浪费大量时间和带宽。
+
+#### 短连接应用场景
+
+一般网站类的web服务都是短连接。试想一个普通网站，比如查看我这篇公众号文章，总共有6000多个字。一旦打开，内容加载完之后，很长时间不用再次传输数据。那占着连接是不是很浪费？
+
+而且服务端可承载的最大连接数是有限的，不然文件句柄不够用啊。一个网站希望用几十、几百台4核8G就可以支撑日活几百万，那最好使用短连接。
+
+#### 长连接应用场景
+
+公司内的各个系统之间使用RPC。大家使用的工具不太相同，有的公司自己基于thrift协议进行开发，有的使用开源的Dubbo。但是大家都头脑清醒的使用了长连接。
+
+因为内部场景下，上下游是固定的，接入的客户端数量也相对固定。长连接节省连接建立开销，请求量上来了也可以直接进行数据传输相对高效。
+
+公司内部使用的中间件也大多使用长连接。例如：MQ、k8s、Redis、mysql。提到这些不得不提相关的两个技术。
+
+### keepalive保活机制
+
+TCP协议提出一个办法，当客户端端等待超过一定时间后自动给服务端发送一个空的报文，如果对方回复了这个报文证明连接还存活着，如果对方没有报文返回且进行了多次尝试都是一样，那么就认为连接已经丢失，客户端就没必要继续保持连接了。如果没有这种机制就会有很多空闲的连接占用着系统资源。原理如下图：
+![保活机制](./img/keepAlive.png)
+
+#### 如何设置
+
+在设置之前我们先来看看KeepAlive都支持哪些设置项
+
+- KeepAlive默认情况下是关闭的，上层应用可以通过开关来开启和关闭
+- tcp_keepalive_time: KeepAlive的空闲时长，或者说每次正常发送心跳的周期，默认值为7200s（2小时）
+- tcp_keepalive_intvl: KeepAlive探测包的发送间隔，默认值为75s
+- tcp_keepalive_probes: 在tcp_keepalive_time之后，没有接收到对方确认，继续发送保活探测包次数，默认值为9（次）
+
+#### 在Linux内核设置
+
+KeepAlive默认不是开启的，如果想使用KeepAlive，需要在你的应用中设置SO_KEEPALIVE才可以生效。
+
+查看当前的配置：
+
+```log
+cat /proc/sys/net/ipv4/tcp_keepalive_time
+cat /proc/sys/net/ipv4/tcp_keepalive_intvl
+cat /proc/sys/net/ipv4/tcp_keepalive_probes
+```
+
+在Linux中我们可以通过修改 /etc/sysctl.conf 的全局配置：
+
+```log
+net.ipv4.tcp_keepalive_time=7200
+net.ipv4.tcp_keepalive_intvl=75
+net.ipv4.tcp_keepalive_probes=9
+```
+
+添加上面的配置后输入 sysctl -p 使其生效，你可以使用 sysctl -a | grep keepalive 命令来查看当前的默认配置
+
+> 如果应用中已经设置SO_KEEPALIVE，程序不用重启，内核直接生效
+
+#### 使用Netty4设置
+
+这里我们使用常用的Java网络框架Netty来设置，只需要在服务端设置即可：
+
+```java
+EventLoopGroup bossGroup   = new NioEventLoopGroup(1);
+EventLoopGroup workerGroup = new NioEventLoopGroup();
+try {
+   ServerBootstrap b = new ServerBootstrap();
+   b.group(bossGroup, workerGroup)
+           .channel(NioServerSocketChannel.class)
+           .option(ChannelOption.SO_BACKLOG, 100)
+           .childOption(ChannelOption.SO_KEEPALIVE, true)
+           .handler(new LoggingHandler(LogLevel.INFO));
+
+   // Start the server.
+   ChannelFuture f = b.bind(8088).sync();
+   // Wait until the server socket is closed.
+   f.channel().closeFuture().sync();
+} finally {
+   // Shut down all event loops to terminate all threads.
+   bossGroup.shutdownGracefully();
+   workerGroup.shutdownGracefully();}
+```
+
+这段代码来自经典的echo服务器，我们在childOption中开启了SO_KEEPALIVE。
+
+Java程序只能做到设置SO_KEEPALIVE选项，其他配置项只能依赖于sysctl配置，系统进行读取。
+
+#### 使用的场景
+
+一般我们使用KeepAlive时会修改空闲时长，避免资源浪费，系统内核会为每一个TCP连接建立一个保护记录，相对于应用层面效率更高。
+
+常见的几种使用场景：
+
+- 检测挂掉的连接（导致连接挂掉的原因很多，如服务停止、网络波动、宕机、应用重启等）
+- 防止因为网络不活动而断连，如使用NAT代理或者防火墙的时候，经常会出现这种问题
+- HTTP协议的Keep-Alive意图在于连接复用，同一个连接上串行方式传递请求-响应数据
+- TCP的KeepAlive机制意图在于保活、心跳，检测连接错误
+
+KeepAlive通过定时发送探测包来探测连接的对端是否存活，但通常也会许多在业务层面处理，他们之间的特点是：
+
+- TCP自带的KeepAlive使用简单，发送的数据包相比应用层心跳检测包更小，仅提供检测连接功能
+- 应用层心跳包不依赖于传输层协议，无论传输层协议是TCP还是UDP都可以用
+- 应用层心跳包可以定制，可以应对更复杂的情况或传输一些额外信息
+- KeepAlive仅代表连接保持着，而心跳包往往还代表客户端可正常工作
+
+像Dubbo这种通信中间件都使用到了TCP的保活机制。k8s客户端和服务端是基于http协议的长连接，用到了http的保活复用连接。
 
 ## red服务从前端调用gray服务时报错：跨域错误。经排查确认由于http的域名下从前端调用https导致
 
