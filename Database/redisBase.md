@@ -2,13 +2,6 @@
 
 - [Redis](#redis)
   - [数据结构](#数据结构)
-    - [SDS 简单动态字符串](#sds-简单动态字符串)
-    - [Ziplist压缩列表](#ziplist压缩列表)
-    - [linkedList(淘汰)](#linkedlist淘汰)
-    - [intset整数集合](#intset整数集合)
-    - [dict](#dict)
-    - [quicklist](#quicklist)
-    - [skiptable 跳跃表](#skiptable-跳跃表)
   - [持久化](#持久化)
   - [删除策略](#删除策略)
     - [缓存淘汰](#缓存淘汰)
@@ -17,26 +10,48 @@
       - [避免脏数据](#避免脏数据)
       - [结论](#结论)
       - [选择](#选择)
-  - [穿透 & 雪崩 & 击穿](#穿透--雪崩--击穿)
+  - [穿透 & 雪崩 & 击穿 等](#穿透--雪崩--击穿-等)
   - [分布式锁](#分布式锁)
   - [redlock](#redlock)
   - [事务](#事务)
+  - [4种缓存](#4种缓存)
+  - [redis集群](#redis集群)
 
 ## 数据结构
 
 1. ``String``
-   - SDS
+   - SDS 简单动态字符串 空间换时间
+   - 单键值最大512m,二进制安全,如数字,字符串,jpg图片或者序列化的对象,spring session + redis实现session共享
 2. ``List`` 队列结构
    - Ziplist
+     - 连续内存
+     - 特殊编码
+     - 节省内存
+     - 时间换空间
    - Quicklist
+     - ![redisQuicklist](/Database/img/redisQuicklist.png)
+     - 链表和ziplist的组合
+   - 链表,有序,简单的字符串列表，按插入顺序排序,利用lrange命令做基于redis的分页功能,性能极好,微博的时间轴，有人发布微博，用lpush加入时间轴，展示新的列表信息
 3. ``Hash`` 适合存对象
    - Ziplist
    - Dict
+     - ![redisDict](/Database/img/redisDict.png)
+     - 渐进式rehash
+     - murmurhash
+   - hash 键值对集合，hashkey field value映射表，适合存储对象(用户信息),视频信息,比string节约空间,可模拟session
 4. ``Set``
    - Inset
+     - 当value是数字
+     - 当size没有超过阈值
+       - 数组项从小到大排序
+       - 二分查找
+     - 时间换空间
    - Dict
+   - string类型的无序集合，不可重复，可以做全局去重，交集并集差集可以计算喜好,点赞,点踩,收藏等
 5. ``Sorted Set``
    - Hash + SkipTable
+     - ![redisSkiptable](/Database/img/redisSkiptable.png)
+   - Zset (sorted set)string类型有序集合，不可重复，每个元素需要分数，分数排序，权重排行并应用
 6. Stream流
    - RadixTree
 7. bitmap位图
@@ -44,53 +59,16 @@
 9. geo地理位置
 10. hyperloglog基数统计
 
-### SDS 简单动态字符串
-
-空间换时间
-
-### Ziplist压缩列表
-
-- 连续内存
-- 特殊编码
-- 节省内存
-- 时间换空间
-
-### linkedList(淘汰)
-
-### intset整数集合
-
-- 当value是数字
-- 当size没有超过阈值
-  - 数组项从小到大排序
-  - 二分查找
-- 时间换空间
-
-### dict
-
-![redisDict](/Database/img/redisDict.png)
-
-- 渐进式rehash
-- murmurhash
-
-### quicklist
-
-![redisQuicklist](/Database/img/redisQuicklist.png)
-
-- 链表和ziplist的组合
-
-### skiptable 跳跃表
-
-![redisSkiptable](/Database/img/redisSkiptable.png)
-
 ## 持久化
 
 - RDB
-  - 会丢失一部分最新数据
+  - 快照读,fork一个进程，先将数据写入临时文件中，待上次持久化结束后，会将该临时文件替换场次的持久化文件，比aof效率高，但是最后一次数据可能会丢失
   - 每个redis实例只会存一份rdb文件
   - 可以通过save,bgsave来调用
   - 二进制文件,lzf
+  - Fork：在linux中，fork()跟主进程一样的子进程，效率考虑，主,子进程会公用一段物理内存，当发生改变的时候，才会把主进程"写时复制"一份给子进程
 - AOF
-  - 类似 binlog 机制,可以做到不丢数据
+  - 类似 binlog 机制,可以做到不丢数据,默认不开启，每秒记录一次，宕机该秒数据可能会消失，超过一定大小就会将之前的数据转为rdb保存
   - 每次数据操作调用 flushAppendOnlyFile 文件来刷新aof
   - 每次操作都需要 fsync ,前台线程阻塞
     - always
@@ -101,9 +79,14 @@
   - 先AOF
   - 后RDB
 
+优缺点
+
+- rdb：节约磁盘，恢复速度快 / 数据太大时消耗性能，宕机最后一次可能没保存
+- Aof： 备份机制稳健、可读日志，可以处理事务 / 更占磁盘、速度慢、同步日志性能差
+
 ## 删除策略
 
-- 惰性删除
+- 惰性删除: 是在使用某个key前，redis会检查一下，这个key如果设置了过期时间是否过期，过期就删除，但是可能有key一直没删除也没被使用，内存会越来越高，这时就需要缓存淘汰
 - 定时删除
 - 定期删除策略是前两种策略的折中：100s  
   - 定期删除策略每隔一段时间执行一次删除过期键操作，并通过限制删除操作执行的时长和频率来减少删除操作对CPU时间的影响。
@@ -121,14 +104,18 @@
 - ``volatile-ttl`` 从设置过期数据集里清理已经过期的key
 - ``volatile-random`` 从设置过期数据集里任意选择数据淘汰
 - ``allkeys-lfu`` 对所有key使用LFU算法进行删除 Least frequently used
-- ``allkeys-lru`` 从数据集中挑选最近最少使用的数据淘汰 Least frequently used
+- ``allkeys-lru`` 从数据集中挑选最近最少使用的数据淘汰 Least frequently used 推荐
 - ``allkeys-random`` 从数据集中任意选择数据淘汰
-- ``no-enviction`` 不清理
+- ``no-enviction`` 不清理,内存不足写入会报错
+
+没有设置过期时间的key，volatile就会跟no-enviction一样报错
 
 #### 如何配置，修改
 
 - 命令 config set maxmemory-policy noeviction
 - config get maxmemory
+- maxmemory-policy volatile-lru(Least Recently Used)
+
 配置文件 - 配置文件redis.conf的maxmemory-policy参数
 
 ### 缓存一致性
@@ -143,6 +130,7 @@
 
 - ttl
 - 定时更新
+  - 有缓存就有缓存同步的问题，我们可以引入缓存同步服务，来定期把有更改的数据批量同步到缓存里。当然这里的数据一定不是哪种实时性要求高的数据，比方说红绿码变更，近期核算检测结构等。对于实时性高的数据，例如个人信息登记和修改，一定是要同时更新存储和缓存的。
 - Binlog订阅更新
 - Delay Queue
 
@@ -160,16 +148,19 @@
   - didi
 - write db -> evict cache 也是好选择
   
-## 穿透 & 雪崩 & 击穿
+## 穿透 & 雪崩 & 击穿 等
 
 1. 穿透: 访问一个不存在的key
    - 在缓存中加入该key的null值,设置短期过期
 2. 雪崩 大量key失效
    - 随机ttl
+   - 当我们设置缓存的时候，如果不注意缓存过期时间，如果在同一时刻大批量的缓存失效，就会有大量的访问同时进入存储。所以我们可以基于数据 sharing 分片设置不同的缓存时间。另外我们还可以有一个缓存续约服务，对于那些没有数据更新的缓存，定期批量的延长缓存时间。当然这个服务也可以基于数据 sharing 分片提高效率。
 3. 击穿 大量请求未缓存的key
    - redis分段锁,同样的请求争夺一把锁
    - 一个去数据库查,其余的自旋100ms
    - 再去缓存读取,如果依然不存在尝试去数据库拿
+4. 缓存容量：西安常住人口大约1200万人，一个人分配10KB的缓存估算，大约就需要120GB，在加上25%的 Buffer，所以需要大约总共150GB的缓存。当然这么大的缓存不可能是单机的，一定是分布式的的，需要利用一些基于缓存数据分片的 sharding 方式把他们均匀的缓存在不同的机器上
+5. 缓存预加载：我们不可以指望通过应用程先查询缓存，没有数据在去存储里取并放到缓存里，这样在并发大的时候依然会有问题。所以需要有缓存的预加载过程，当然我们可以基于数据 sharing 分片的方式去加载，例如可以基于人所属的区域，分不同的批次做，这样也提高效率。
 
 ## 分布式锁
 
@@ -192,3 +183,51 @@ lua make (compare and set)
 - DISCARD
 - WATCH
 - UNWATCH
+
+## 4种缓存
+
+JVM堆内缓存
+
+- JVM堆内缓存因为可以避免memcache、redis等集中式缓存网络通信故障问题，目前还在项目中广泛使用。
+- 第一不要全量拉取覆盖，有很大的网络开销,削峰填谷
+- 第二不要把一个大对象整体替换为新对象.new 对象 会造成GC频繁。
+- 一天1-2次fullgc是正常的,提前知道有大促,可通过提前触发GC等方式避免高峰期爆发fullgc.younggc至少是5分钟一次
+
+JVM堆外缓存
+
+- 堆外缓存的内存回收原理使用的是Java的虚引用。这个设计可以避免JVM的GC问题，
+
+linux的buffers/cached
+  
+- linux系统上运行一下top 命令或者free -h | -m命令，都能够看到buffers和cached相关的数据。需要注意的是通常我们看到的监控数据 空闲内存百分比
+
+集中式缓存
+
+- redis缓存其实也有本机代理，可以缓存一些活跃的数据在本机上，本机可以取到不数据时不需要跨网络通信。但是因为redis本质是key-value的结构。如果需要根据通配符取数据全量，如果网络出现故障，可能会影响数据的完整性。
+- 但是redis缓存最让人担心的是不规范的使用方法。比如存一个很大的value。具体这个对网络和存储造成的问题就不详细说了。可以想象下马桶堵了的情景
+
+## redis集群
+
+redis集群使用时有什么注意事项
+
+1. 防止集中失效
+   - 防止缓存集中失效是对后端存储的保护。
+   - 缓存穿透、缓存集中失效和缓存雪崩
+2. 单线程执行，注意不要卡住
+   - 单线程会阻塞,不能多线程执行任务,而且卡住常用于避免大key问题,大key既是大value,如果大value会导致网络和存储问题
+3. 注意客户端和服务端的版本匹配
+   - 客户端做了什么事情。我理解它就做了两件事：第一是使用RESP（Redis自定义的序列化协议）传输客户端命令并返回结果。第二是为了做第一件事，因为Redis集群是直连服务端模式，所以计算命令要落在哪个节点、哪个哈希槽上也是客户端来做的，我就称为选节点吧。
+   - 升级客户端依赖的jar包变了。这个可能会引起程序启动错误
+4. 分片要保持流量均匀
+   - redis集群的发展史，从单机版到主从版到哨兵模式.分片模式
+   - redis集群就是将一个完整服务数据分成几份，每份都带着从节点，故障时可自动转移的一个整体。
+   - 分片保持流量均匀更不容易阻塞嘛。
+5. 注意超时时间配置
+   - 带过期时间的key又叫volatile key不稳定key,相当key这个对象有value和过期时间2个属性
+   - 服务端有两种超时配置
+   - 一个是惰性删除，就是访问的时候发现过期了，就直接删除了；
+   - 另一个策略会定期去删除，这个是为了防止一个过期的key总是不被访问到，还占着资源不释放。
+6. 当内存缓存用，推荐删除代替更新
+   - 先删除缓存,再更新数据库,更新缓存
+   - Cache-Aside选择这个模式
+   - Read-Through/Write-Through、Write-Behind这些都是以缓存为主,不可靠
