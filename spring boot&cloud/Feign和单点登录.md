@@ -1,3 +1,5 @@
+
+
 ###### 主类上面添加``@EnableFeignClients`` 开启``feign``
 ###### 注解``@FeignClient(value,fallback)``写接口上,被类实现不过一般都是写好接口将接口引入feign中
 value是提供者的名称,动态拼接路径，fallback是实现类class,失败调用对应的实现方法
@@ -6,14 +8,16 @@ ribbon / Hystrix / 请求压缩 / 日志级别
 
 ###### 远程调用是将对象转化为``json``放在请求体中,接收方不一定要同类型的对象接收,只要对象字段一样,都可以``@RequestBody``接收,最好所有远程调用feign都用``@Post``请求
 ``feign``远程调用设置的响应时间是1s,可能会导致没有快速响应直接报错不存在,需要设置响应时间
-```
+
+```xml
 feign:
   client:
 	config:
-	  default:
+		default:
 		connectTimeout: 50000
 		readTimeout: 50000
 ```
+
 ##### 客户端和服务端的负载均衡
 ![](/spring%20boot&cloud/img/serverLoadblance.jpg)
 
@@ -29,6 +33,7 @@ feign自身可以维护服务列表,当他配合nacos时让nacos维护服务列�
 
 ## Feign请求头无信息
 feign动态代理,远程调用是新的请求,没有原始的请求头和信息,需要一个拦截器,在远程调用之前往请求里面加入原始请求头信息,更改源码的配置类,添加拦截器(这是老的每个微服务都这么弄一个,可以在工具类里面弄一个公用的)
+
 ``` java
 @Configuration
 public class GlFeignConfig {
@@ -81,47 +86,47 @@ public class FeignInterceptor implements RequestInterceptor {
 
 拦截器如下
 
-``` java
-	public class CartInterceptor implements HandlerInterceptor {
-	  public static ThreadLocal<UserInfoTo> threadLocal = new ThreadLocal<>();
-	  @Override
-	  public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-	    UserInfoTo userInfoTo = new UserInfoTo();
-	    HttpSession session = request.getSession();
-	    MemberRsepVo user = (MemberRsepVo) session.getAttribute(AuthServerConstant.LOGIN_USER);
-	    if (user != null){
-	      // 用户登陆了
-	      userInfoTo.setUsername(user.getUsername());
-	      userInfoTo.setUserId(user.getId());
-	    }
-	    Cookie[] cookies = request.getCookies();
-	    if(cookies != null && cookies.length > 0){
-	      for (Cookie cookie : cookies) {
-	        String name = cookie.getName();
-	        if(name.equals(CartConstant.COOKIE_TEMP_USER_KEY)){
-	          userInfoTo.setUserKey(cookie.getValue());
-	          userInfoTo.setTempUser(true);
-	        }
-	      }
-	    }
-	    // 如果没有临时用户 则分配一个临时用户
-	    if (StringUtils.isEmpty(userInfoTo.getUserKey())){
-	      String uuid = UUID.randomUUID().toString().replace("-","");
-	      userInfoTo.setUserKey("yxgulimall-" + uuid);
-	    }
-	    threadLocal.set(userInfoTo);
-	    return true;
-	  }
-	  /**
-	   * 执行完毕之后分配临时用户让浏览器保存
-	   */
-	  @Override
-	  public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
-	    UserInfoTo userInfoTo = threadLocal.get();
-	    if(!userInfoTo.isTempUser()){
-	      Cookie cookie = new Cookie(CartConstant.COOKIE_TEMP_USER_KEY, userInfoTo.getUserKey());
-	      // 设置这个cookie作用域 过期时间
-	      cookie.setDomain("gulimall.com");
-	      cookie.setMaxAge(CartConstant.COOKIE_TEMP_USER_KEY_TIMEOUT);
-      response.addCookie(cookie);}}}
-      ```
+```java
+public class CartInterceptor implements HandlerInterceptor {
+public static ThreadLocal<UserInfoTo> threadLocal = new ThreadLocal<>();
+@Override
+public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+UserInfoTo userInfoTo = new UserInfoTo();
+HttpSession session = request.getSession();
+MemberRsepVo user = (MemberRsepVo) session.getAttribute(AuthServerConstant.LOGIN_USER);
+if (user != null){
+	// 用户登陆了
+	userInfoTo.setUsername(user.getUsername());
+	userInfoTo.setUserId(user.getId());
+}
+Cookie[] cookies = request.getCookies();
+if(cookies != null && cookies.length > 0){
+	for (Cookie cookie : cookies) {
+	String name = cookie.getName();
+	if(name.equals(CartConstant.COOKIE_TEMP_USER_KEY)){
+		userInfoTo.setUserKey(cookie.getValue());
+		userInfoTo.setTempUser(true);
+	}
+	}
+}
+// 如果没有临时用户 则分配一个临时用户
+if (StringUtils.isEmpty(userInfoTo.getUserKey())){
+	String uuid = UUID.randomUUID().toString().replace("-","");
+	userInfoTo.setUserKey("yxgulimall-" + uuid);
+}
+threadLocal.set(userInfoTo);
+return true;
+}
+/**
+* 执行完毕之后分配临时用户让浏览器保存
+*/
+@Override
+public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+UserInfoTo userInfoTo = threadLocal.get();
+if(!userInfoTo.isTempUser()){
+	Cookie cookie = new Cookie(CartConstant.COOKIE_TEMP_USER_KEY, userInfoTo.getUserKey());
+	// 设置这个cookie作用域 过期时间
+	cookie.setDomain("gulimall.com");
+	cookie.setMaxAge(CartConstant.COOKIE_TEMP_USER_KEY_TIMEOUT);
+response.addCookie(cookie);}}}
+```

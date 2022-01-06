@@ -1,3 +1,27 @@
+# MQ
+
+- [MQ](#mq)
+  - [为什么使用MQ](#为什么使用mq)
+    - [流量削峰](#流量削峰)
+    - [异步处理](#异步处理)
+    - [应用解耦](#应用解耦)
+  - [MQ的分类](#mq的分类)
+    - [内部原理](#内部原理)
+    - [JMS支持](#jms支持)
+    - [核心功能](#核心功能)
+    - [rabbitMQ](#rabbitmq)
+    - [TTL](#ttl)
+    - [延迟队列加载](#延迟队列加载)
+    - [轮询扫描](#轮询扫描)
+    - [Dlx (死信队列，兜底队列，本身也有routekey)](#dlx-死信队列兜底队列本身也有routekey)
+    - [核心组件](#核心组件)
+    - [持久化](#持久化)
+    - [消息的应答模式](#消息的应答模式)
+    - [可靠投递机制](#可靠投递机制)
+    - [幂等性](#幂等性)
+  - [RabbitMQ](#rabbitmq-1)
+  - [备份交换机](#备份交换机)
+
 ## 为什么使用MQ
 
 ### 流量削峰
@@ -20,7 +44,7 @@ A调用B，B返回A说收到调用请求了。同步请求已经完成，但B的
 
 MQ实现了逻辑解耦+物理解耦。逻辑上，将请求和结果处理分开了；物理上，系统只用与MQ通信。异步处理的三种方式的前两种，现在也多很常见。那是因为MQ是有代价的，那就是需要一套MQ设施。做开放平台，用户之间的唯一设施就是互联网，这时候更依赖双方的协议约定，所以前两种异步处理方式不会被MQ取代。
 
-### MQ的分类
+## MQ的分类
 
 Kafka大数据的杀手锏，以百万级TPS吞吐量名声大噪。时效是ms级别，分布式的可用性高。消费者采用拉的方式获取消息，消息有序，通过控制可以保证消息仅被消费一次。但是单机超过64个分区，load会明显飙高；实时性取决于轮询时间间隔，关键是有可能丢消息，不适合订单业务中使用。
 
@@ -28,20 +52,19 @@ RocketMQ是国货，用Java语言实现，在设计时参考了Kafka，单机吞
 
 RabbitMQ是erlang开发的，吞吐量达到万级别，稳定、健壮、跨平台，支持多种语言，企业间通信中常用。
 
-## 内部原理
+### 内部原理
 
 Kafka怎么保证消息能且仅能收到一次？这是个埋坑题，是与面试官斗智斗勇的开始。什么幂等、事务、流式EOS呀，其实呢，Kafka本身是不保证仅且仅收到一次的，所以这些实现方法都不优雅。
 
 RabbitMQ通过AMQP事务机制，还有上面已经提过的ack也就是confirm两种可选方式保证消息被收到。
 
-
-## JMS支持
+### JMS支持
 
 RabbitMQ不支持JMS协议。这个很好理解。因为JMS是Java消息服务，提供了消息传递的Java标准API。
 
 而RabbitMQ是Erlang写的，对Java的支持会弱一些。但是RabiitMQ实现了AMQP标准协议。AMQP只是统一了数据交换的标准格式，与语言无关。
 
-## 核心功能
+### 核心功能
 
 RabbitMQ的核心实际上就是AMQP的核心：MessageQueue、Exchange和Binding。
 
@@ -55,6 +78,7 @@ Exchange有四种类型：fanout(广播),topic(主题,路径),direct(bindingkey)
 Kafka只有topic的概念。这是因为Kafka的设计上消息只用存一份，通过游标，发送后不立即删除消息。多个消费者组可以互不影响的消费。这是Kafka的一大改进。
 
 消息百分百投递成功
+
 1. 一张表存放消息信息(业务数据)，另一张表存放消息记录表
 2. 发送消息到MQ broker节点(confim发送，返回异步结果)
 3. 生产者接受broker的confim结果，正常就更新消息记录表的该消息状态status = 1；
@@ -62,7 +86,7 @@ Kafka只有topic的概念。这是因为Kafka的设计上消息只用存一份�
 5. 把中间状态的消息重新投递retry send，继续发送到MQ，
 6. 可以设置最大尝试次数，如3次之后还是失败就 status = 2；转人工处理或把消息转入失败表中
 
-## rabbitMQ
+### rabbitMQ
 
 基于AMQP协议的rpc远程调用，将微服务各模块的通信依赖统一改为依赖该中间件
 
@@ -72,17 +96,17 @@ Kafka只有topic的概念。这是因为Kafka的设计上消息只用存一份�
 
 Ttl 整个队列消息存活时间，也可以设置单独的消息存活时间(很少用)
 
-## TTL
+### TTL
 
 消息ttl 每个消息具有单独的ttl,到期也不一定会被马上丢弃，因为消息是否过期是在即将投递到消费者之前判定的，如果当前队列有严重的消息积压情况，则已过期的消息也许还能存活较长时间,不设置ttl就永不过期,设置为0即立刻投递消费者成功,不然马上丢弃
 
 队列ttl 消息进入队列开始,领取一个队列规定的ttl,到期会被队列立刻丢弃
 
-## 延迟队列加载
+### 延迟队列加载
 
 消息设置ttl,到达死信,消费者一直消费死信队列就是一种延迟加载的机制(订单付款),但是队列机制长时间的ttl会堵住后面的短时间消息ttl,需要一个插件,只要消息 ttl 到期,就会立即被丢到死信.之前是在交换机里面
 
-## 轮询扫描
+### 轮询扫描
 
 quartz , spring task
 
@@ -92,36 +116,36 @@ quartz , spring task
 
 如果时限比较长比如1-2天，可以选择用轮询扫描。
 
-## Dlx (死信队列，兜底队列，本身也有routekey)
+### Dlx (死信队列，兜底队列，本身也有routekey)
 
 1. 队列消息长度达到限制
 2. 消费者拒绝消费消息(basicNack/basicReject)并requeue为false
 3. 原队列存在消息过期，过期消息转入dlx
-   
+
 Dlx 跟普通的队列一样，也需要交换机和queue，只是一个兜底队列，别的queue在配置的时候设置消息失败之后如何转入dlx交换机和队列
 
 队列，所以遵循FIFO先进先出原则。因为存放的是消息，所以是一种跨进程的通信机制。
 
-## 核心组件
+### 核心组件
 
 AMPQ消息路由必要三部分：交换器、队列、绑定。
 
 Java核心组件：ConnectionFactory、Connection、Channel、Delivery、DeliverCallback、CancelCallback
 
-## 持久化
+### 持久化
 
 消息持久化
 队列持久化
 
-## 消息的应答模式
+### 消息的应答模式
 
-![](/spring%20boot&cloud/img/MQReturnConfirm.png)
+![MQReturnConfirm](/spring%20boot&cloud/img/MQReturnConfirm.png)
 
 自动签收 消息可能丢失(出现故障会被直接丢掉消息)    MessageListener 自动签收 需要被消费者实现;
 
 手动签收 消息不会丢失,而且可以批量签收  ChannelAwareMessageListener 手动签收 需要被消费者实现
 
-## 可靠投递机制
+### 可靠投递机制
 
 从producer和consumer 两方面确认消息的可靠投递
 
@@ -142,17 +166,16 @@ Java核心组件：ConnectionFactory、Connection、Channel、Delivery、Deliver
 ``confirmcallback`` 。
 
 ``CorrelationData``：用来表示当前消息唯一性。
-消息只要被 ``broker`` 接收到就会执行 ``confirmCallback``，如果是 ``cluster ``模式，需要所有
+消息只要被 ``broker`` 接收到就会执行 ``confirmCallback``，如果是 ``cluster``模式，需要所有
 ``broker`` 接收到才会调用 ``confirmCallback``。
-被 ``broker`` 接收到只能表示 ``message`` 已经到达服务器，并不能保证消息一定会被投递 到目标 ``queue`` 里。所以需要用到接下来的 ``returnCallback ``。
+被 ``broker`` 接收到只能表示 ``message`` 已经到达服务器，并不能保证消息一定会被投递 到目标 ``queue`` 里。所以需要用到接下来的 ``returnCallback``。
 ``spring.rabbitmq.publisher-returns=true``
 ``spring.rabbitmq.template.mandatory=true``
 ``confrim`` 模式只能保证消息到达 ``broker`` ，不能保证消息准确投递到目标 ``queue`` 里。在有 些业务场景下，我们需要保证消息一定要投递到目标 ``queue`` 里，此时就需要用到
 ``return`` 退回模式。
 这样如果未能投递到目标 ``queue`` 里将调用 ``returnCallback`` ，可以记录下详细到投递数 据，定期的巡检或者自动纠错都需要这些数据。
 
-
-确认机制参数: `` spring.rabbitmq.publisher-confirm-type=correlated``
+确认机制参数: ``spring.rabbitmq.publisher-confirm-type=correlated``
 
 1. ``NONE``    禁用发布确认模式，是默认值
 
@@ -164,8 +187,7 @@ Java核心组件：ConnectionFactory、Connection、Channel、Delivery、Deliver
 
 其二在发布消息成功后使用``rabbitTemplate`` 调用 ``waitForConfirms`` ``或waitForConfirmsOrDie``; 等待 ``broker`` 节点返回发送结果，根据返回结果来判定下一步的逻辑; ``waitForConfirmsOrDie`` 方法如果返回 `false` 则会关闭 `channel` ，则接下来无法发送消息到 ``broker``
 
-
-## 幂等性
+### 幂等性
 
 意外导致ack丢失,消费者幂等性一般用全局id来解决
 
@@ -183,23 +205,24 @@ T<发送消息的类型> OrderEntity orderEntity  [Spring自动帮我们转换] 
 场景: 订单服务启动多个: 同一个消息只能一个客户端收到
 只有一个消息完全处理完,方法运行结束后,我们就可以接收到下一个消息
 
-``@RabbitListener``： 只能标注在类、方法上 配合 
+``@RabbitListener``： 只能标注在类、方法上配合
 
 ``@RabbitHandler`` : 前一个注解指定监听什么队列,通过方法参数直接拿到消息内容而不用拿到包装的message,再转换成需要的类型
 
-``@RabbitHandler``: 只能标注在方法上	[重载区分不同的消息]
+``@RabbitHandler``: 只能标注在方法上[重载区分不同的消息]
 
-``@RabbitHandler``
-```
+```java
+@RabbitHandler
 public void receiveMessageA(Message message, OrderEntity orderEntity, Channel channel)
 ```
-@EnableJms @EnableRabbit / @JmsListener 
+
+@EnableJms @EnableRabbit / @JmsListener
 
 @RabbitListener / JmsAutoConfiguration RabbitAutoConfiguration
 
 ## RabbitMQ
 
-![](/spring%20boot&cloud/img/rabbitmqBase.png)
+![rabbitmqBase](/spring%20boot&cloud/img/rabbitmqBase.png)
 
 ``Broker``
 
@@ -241,4 +264,4 @@ Routing key是消息头的属性，生产者将消息发送到交换机时，会
 
 ## 备份交换机
 
-![](/spring%20boot&cloud/img/BackupExchange.png)
+![BackupExchange](/spring%20boot&cloud/img/BackupExchange.png)

@@ -1,5 +1,8 @@
+# 脚本
+
 Java服务的监控脚本
-```lua
+
+```script
 #!/bin/bashps -Leo pid,lwp,user,pcpu,pmem,cmd >> /tmp/pthreads.logecho "ps -Leo pid,lwp,user,pcpu,pmem,cmd >> /tmp/pthreads.log" >> /tmp/pthreads.logecho `date` >> /tmp/pthreads.logecho 1pid=`ps aux|grep tomcat|grep cwh|awk -F ' ' '{print $2}'`echo 2echo "pstack $pid >> /tmp/pstack.log" >> /tmp/pstack.log
 pstack $pid >> /tmp/pstack.logecho `date` >> /tmp/pstack.logecho 3echo "lsof >> /tmp/sys-o-files.log" >> /tmp/sys-o-files.log
 lsof >> /tmp/sys-o-files.logecho `date` >> /tmp/sys-o-files.logecho 4echo "lsof -p $pid >> /tmp/service-o-files.log" >> /tmp/service-o-files.log
