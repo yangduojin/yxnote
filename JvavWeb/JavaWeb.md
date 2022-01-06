@@ -1,0 +1,188 @@
+# JavaWeb
+
+## servlet
+
+### 重定向
+
+- Redirect 地址栏发生变化，两次请求，不共享request域中数据，不能访问web_inf下面的资源，可以访问工程外的资源.(resp.sendRedirect(XXX))
+- resp.setStatus(302);// 设置响应状态码 302 ，表示重定向，（已搬迁）
+- resp.setHeader("Location", "http://localhost:8080");// 设置响应头，说明 新的地址在哪里，或 resp.sendRedirect("http://localhost:8080");
+- //重定向 model不能携带数据,需要RedirectAttributes他来带数据到新页面,在参数中引入他
+- redirectAttributes.addFlashAttribute() 将数据放在session中,只能取一次
+- redirectAttributes.addAttribute() 将数据放在url的后面
+
+### 请求转发
+
+- Forward 服务器内部重定向(请求转发) 地址栏不变，一次请求，共享Request/Response域中的数据，不可以访问工程以外的资源
+- 可访问web_inf里的文件，建议用request域对象来传输数据，只有访问web_inf文件或请求域对象这两种情况用请求转发，否则用Redirect
+- request.getRequestDispatcher("路径").forward(request,response);
+
+### HttpServletRequest & HttpServletResponse
+
+1. HttpServletRequest 类
+   - 请求进入tomcat，会被解析http信息，封装到Request对象中，
+   - 传入service方法(doget,dopost)中，通过HttpServletRequest对象获取所有信息
+     - getRequestURI()  获取请求的资源路径
+     - getRequestURL()  获取请求的统一资源定位符（绝对路径）
+     - getRemoteHost()  获取客户端的 ip 地址
+     - getHeader() 获取请求头
+     - getParameter()  获取请求的参数
+     - getParameterValues()  获取请求的参数（多个值的时候使用）
+     - getMethod()  获取请求的方式 GET 或 POST
+     - setAttribute(key, value);  设置域数据
+     - getAttribute(key);  获取域数据
+     - getRequestDispatcher()  获取请求转发
+   - req.setCharacterEncoding("UTF-8"); 设置中文防乱码 放在第一句
+   - resp.setContentType("text/html; charset=UTF-8");// 中文乱码 放在第一句
+   - Tomcat8及以上版本已经在配置中解决了GET请求乱码的问题(Post没有解决)
+
+2. HttpServletResponse 类
+   - 请求进入tomcat，会创建一个Response对象传递个servlet程序使用，
+   - 我们通过HttpServletResponse对象来进行设置
+   - 字节流 getOutputStream();  常用于下载（传递二进制数据）
+   - 字符流 getWriter();  常用于回传字符串（常用）// 一个response只能2选1 不然会报错
+   - resp.setContentType("text/html; charset=UTF-8");// 中文乱码
+
+## Filter
+
+| 生命周期阶段 | 执行时机         | 生命周期方法                             |
+| ------------ | ---------------- | ---------------------------------------- |
+| 创建对象     | Web应用启动时    | init方法，通常在该方法中做初始化工作     |
+| 拦截请求     | 接收到匹配的请求 | doFilter方法，通常在该方法中执行拦截过滤 |
+| 销毁         | Web应用卸载前    | destroy方法，通常在该方法中执行资源释放  |
+
+```xml
+// Filter 运行在服务器，对请求资源过滤(编码，过滤敏感字，事务统一调度，统一跳转错误页面)，优先于请求资源之前执行
+    <servlet> // 精准匹配
+        <servlet-name>servletDemo01</servlet-name>
+        <servlet-class>com.atguigu.ServletDemo01</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>servletDemo01</servlet-name>
+        <url-pattern>/ServletDemo01</url-pattern>
+    </servlet-mapping>
+
+    <filter-mapping>// 模糊匹配
+        <filter-name>Target02Filter</filter-name>
+        // 模糊匹配：前杠后星 
+        //    /user/demo01
+        //   /user/demo02
+        //    /user/demo03
+        //  /demo04
+        <url-pattern>/user/\* </url-pattern>
+    </filter-mapping>
+
+    <filter> // 扩展名匹配
+        <filter-name>Target04Filter</filter-name>
+        <filter-class>com.atguigu.filter.filter.Target04Filter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>Target04Filter</filter-name>
+        <url-pattern>*.png</url-pattern>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>Target05Filter</filter-name>
+        // 根据Servlet名称匹配(很少用)
+        <servlet-name>Target01Servlet</servlet-name>
+    </filter-mapping>
+
+// 过滤器链: 过滤器链中每一个Filter执行的顺序是由web.xml中filter-mapping配置的顺序决定的。如果某个Filter是使用ServletName进行匹配规则的配置，那么这个Filter执行的优先级要更低
+// web.xml代码
+    <servlet>
+        <servlet-name>servletDemo01</servlet-name>
+        <servlet-class>com.atguigu.ServletDemo01</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>servletDemo01</servlet-name>
+        <url-pattern>/ServletDemo01</url-pattern>
+    </servlet-mapping>
+
+    <filter-mapping>
+        <filter-name>CloseConnectionFilter</filter-name>
+        <url-pattern>/protected/orderClient</url-pattern>
+        <url-pattern>/manager</url-pattern>
+        <url-pattern>/index.html</url-pattern>
+        <url-pattern>/user</url-pattern>
+        <url-pattern>/protected/cart</url-pattern>
+    </filter-mapping>
+
+// ServletDemo01代码
+    public class ServletDemo01 extends HttpServlet {
+        @Override
+        protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            doGet(request, response);
+        }
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            System.out.println("ServletDemo01接收到了请求...");}}
+// 创建多个Filter拦截Servlet
+    <filter-mapping>
+        <filter-name>TargetChain03Filter</filter-name>
+        <url-pattern>/Target05Servlet</url-pattern>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>TargetChain02Filter</filter-name>
+        <url-pattern>/Target05Servlet</url-pattern>
+    </filter-mapping>
+
+    <filter-mapping>
+        <filter-name>TargetChain01Filter</filter-name>
+        <url-pattern>/Target05Servlet</url-pattern>
+    </filter-mapping>
+```
+
+```java
+通过在filter中写入统一的操作 来避免业务代码冗余，耦合度高
+
+    try {// 统一开启事务
+        JDBCUtil.getConnection();
+        JDBCUtil.startTransaction();
+        chain.doFilter(req, resp);
+        JDBCUtil.commit();
+    } catch (Exception e) {
+        e.printStackTrace();
+        try {
+            JDBCUtil.rollback();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw new RuntimeException(e.getMessage());}
+        throw new RuntimeException(e.getMessage());}
+
+
+    try { // 统一关闭连接
+            chain.doFilter(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        } finally { JDBCUtil.releaseConnection();}
+
+
+    HttpServletRequest request = (HttpServletRequest) req;
+        try {// 错误统一跳转到 错误界面
+            chain.doFilter(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getRequestDispatcher("/WEB-INF/pages/error.html").forward(request,resp);}
+
+
+    try { // 路径请求检查是否登录 同步，异步
+        HttpServletRequest request = (HttpServletRequest) req;
+        HttpServletResponse response = (HttpServletResponse) resp;
+        User user = (User) request.getSession().getAttribute(BookStoreConstants.USERSESSIONKEY);
+        if (user == null) {
+            String method = request.getParameter("method");
+            if("toCartPage".equals(method) || "cleanCart".equals(method) || "checkout".equals(method)){
+                response.sendRedirect(request.getContextPath()+"/user?method=toLoginPage");
+            }else {
+                JsonUtils.writeResult(response, CommonResult.error().setMessage("unLogin"));}
+            return;}
+        chain.doFilter(req, resp);
+    } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException(e.getMessage());}
+```
+
+## Listener
