@@ -186,3 +186,17 @@
 ```
 
 ## Listener
+
+## 加密
+
+常见加密( Cipher, SecretKeySpec )
+
+- 对称加密DES / AES base64
+- 非对称加密
+  - 常见算法 RSA / ECC
+  - KeyPairGenerator
+- 加密模式: ECB / CBC
+- 填充模式: NoPadding / PKCS5Padding 
+- 消息摘要: MD5 / SHA1 / SHA256 / SHA512
+
+数字签名: Signature

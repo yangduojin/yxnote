@@ -1,4 +1,4 @@
-# OAuth2
+# JWT&OAuth
 
 模式选择
 

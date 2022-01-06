@@ -1,5 +1,20 @@
 # Linux
 
+- [Linux](#linux)
+  - [性能查看](#性能查看)
+    - [整机](#整机)
+      - [cpu](#cpu)
+      - [内存 free和pidstat](#内存-free和pidstat)
+      - [硬盘查看df -h(转化为单位制) 查看磁盘剩余空间数](#硬盘查看df--h转化为单位制-查看磁盘剩余空间数)
+      - [磁盘IO查看iostat -xdk 2 3(2秒/共3次) 和 pidstat](#磁盘io查看iostat--xdk-2-32秒共3次-和-pidstat)
+      - [网络IO查看 ifstat l](#网络io查看-ifstat-l)
+    - [CPU占用过高的定位分析思路(遇到的印象深刻的问题)](#cpu占用过高的定位分析思路遇到的印象深刻的问题)
+  - [常用命令](#常用命令)
+  - [linux 配置](#linux-配置)
+    - [配置基本信息](#配置基本信息)
+    - [经验错误汇总](#经验错误汇总)
+    - [虚拟机软件设置网关，ip，nat模式](#虚拟机软件设置网关ipnat模式)
+
 ## 性能查看
 
 ### 整机
@@ -12,7 +27,7 @@ top 查看整机信息
 
 uptime [top的精简版]
 
-### cpu
+#### cpu
 
 - vmstat -n 2 3 采样cpu等信息,每2秒一次,一共3次
 
@@ -34,7 +49,7 @@ cpu
 
 - pidstat -u 1 -p 进程编号,每个进程使用cpu的用量分解信息,1秒刷新
 
-### 内存 free和pidstat
+#### 内存 free和pidstat
 
 应用程序可用内存数
 
@@ -48,9 +63,9 @@ free -m/-g：兆/G
 
 - pidstat -p 5101(进程号) -r 2 (采样间隔秒数,查看额外)
 
-### 硬盘查看df -h(转化为单位制) 查看磁盘剩余空间数
+#### 硬盘查看df -h(转化为单位制) 查看磁盘剩余空间数
 
-### 磁盘IO查看iostat -xdk 2 3(2秒/共3次) 和 pidstat
+#### 磁盘IO查看iostat -xdk 2 3(2秒/共3次) 和 pidstat
 
 iostat -xdk 2 3(2秒/共3次)
 
@@ -66,7 +81,7 @@ iostat -xdk 2 3(2秒/共3次)
 
 pidstat -d 2 -p 5101
 
-### 网络IO查看 ifstat l
+#### 网络IO查看 ifstat l
 
 ```log
 wget http://gael.roualland.free.fr/lifstat/ifstat-1.1.tar.gz
@@ -88,14 +103,14 @@ make install
 - 程序网络I/O优化
 - 增加网络I/O带宽
 
-## CPU占用过高的定位分析思路(遇到的印象深刻的问题)
+### CPU占用过高的定位分析思路(遇到的印象深刻的问题)
 
 结合Linux和JDK命令一块分析
 
 案例步骤
 
 - 先用top命令找出CPU占比最高的
-- ps -ef或者jps进一步定位，得知是一个怎么样的一个后台**进程**作搞屎棍 
+- ps -ef或者jps进一步定位，得知是一个怎么样的一个后台**进程**作搞屎棍
   - ps -ef|grep java|grep -v grep
   - jps -l |grep atguigu
 - 定位到具体**线程**或者代码
@@ -129,3 +144,134 @@ ps - process status
 | jmap   | Memory Map for Java，生成虚拟机的内存转储快照（Heapdump文件）                                            |
 | jhat   | JVM Heap Dump Browser，用于分析heapdump文件，它会建立一个HTTP/HTML服务器，让用户可以在浏览器上查看分析结 | 果 |
 | jstack | Stack Trace for Java，显示虚拟机的线程快照                                                               |
+
+## 常用命令
+
+- Man  or  --help
+- Date
+- Cal
+- Pwd 查看当前完整路径
+- Ls  -a -l ll
+- netstat -nltp 看系统占用的端口号
+- netstat -tunlp|grep 端口号    查看端口号，或查看全部
+- source /etc/profiles  (虚拟机重新加载配置)
+- lsof -i:xxx
+- Ps -ef | grep xxx
+- Mkdir -p
+- Rmdir
+- Crontab
+- Tail -n5
+- Tail -f 文件名  看日志,-f 实时滚动
+- History
+- Echo
+- Rm  -rvf   -rf
+- Touch
+- Top   top / free  查看整机信息
+- df -l
+- Cp -r -v \cp
+- Mv old n new n
+- Mv /old dir /new dir
+- More space / enter / q / ctrl f
+- Cat *  ,  ** , * > *  ,  * > >*  , tac
+- Less pageDown/Up  /  /?  N   n
+- systemctl list-unit-files 查看开机启动项
+- service mysqld stop
+- kill -s 9 pid
+- Free -m 查看内存和占用
+- Chmod -R 777 更改权限
+- Yum makecache
+- find / -name "*maven*" / 下搜索所有匹配maven的
+- ulimit -u 查看当前用户的可用线程数,普通是1024
+
+## linux 配置
+
+### 配置基本信息
+
+虚拟机内部配置ip,网关等 vim  /etc/sysconfig/network-scripts/ifcfg-ens33
+
+```conf
+TYPE="Ethernet"
+PROXY_METHOD="none"
+BROWSER_ONLY="no"
+BOOTPROTO="static"
+DEFROUTE="yes"
+IPV4_FAILURE_FATAL="no"
+#IP和子网掩码
+IPADDR=192.168.134.11
+NETMASK=255.255.255.0
+#网关和DNS服务器 要与虚拟机nat一致
+GATEWAY=192.168.134.2
+DNS1=8.8.8.8
+DNS2=114.114.114.114
+#IP地址的前24为代表网络地址，后面是主机地址
+PREFIX=24
+IPV6INIT="yes"
+IPV6_AUTOCONF="yes"
+IPV6_DEFROUTE="yes"
+IPV6_FAILURE_FATAL="no"
+IPV6_ADDR_GEN_MODE="stable-privacy"
+NAME="ens33"
+UUID="9b0a1ad0-dbac-4636-ad5e-098be246d2fa"
+DEVICE="ens33"
+ONBOOT="yes"
+ZONE=public
+
+# 配置一些别的信息 ,我暂时还没搞清楚是什么
+
+JAVA_HOME=/opt/jdk1.8.0_221
+PATH=$JAVA_HOME/bin:$PATH
+export JAVA_HOME PATH
+export 
+CATALINA_HOME=/opt/apache-tomcat-7.0.70
+export PATH=$CATALINA_HOME/bin:$PATH
+
+无网络时修改
+Cd /etc/sysconfig/network-scripts/ 里面有eth0 eth1 两个网卡,看ip 修改那个 在里面加上网关地址,两个dns,wq保存后service network restart 重启
+```
+
+- systemctl status firewalld
+- systemctl stop firewalld
+- systemctl disable firewalld
+- systemctl enable firewalld
+
+### 经验错误汇总
+
+安装完成后ifconfig无反应，cd /sbin,在sbin目录下输入ls，可见下图所示，并没有ifconfig。
+安装  sudo yum install net-tools 即可
+
+安装yum
+直接yum update？
+rpm -aq|grep yum|xargs rpm -e --nodeps 删除所有yum
+
+### 虚拟机软件设置网关，ip，nat模式
+
+1. 去虚拟软件右键网络配置选择nat模式
+2. 选择还原默认设置
+3. 查看左下角子网ip，再查看nat设置里网关ip，他两应该是在同一个网段，但是后面不一样192.168.zzz.0，192.168.zzz.2
+4. 去vm8虚拟网卡，设置ip地址为192.168.zzz.1，介于软件子网ip和网关之间，子网掩码255，默认网关就是软件的网关192.168.zzz.2
+5. 最后虚拟系统网络无论选nat还是自定义都可以ping通(需关闭防火墙)ping 宿主机或者网关都可以ping通
+6. 但是系统里面要把网关设置的跟外面软件一样，ip最后一位可以变，但是需要重启192.168.zzz.11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
