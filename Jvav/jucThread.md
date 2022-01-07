@@ -585,6 +585,10 @@ RequestContextHolder.setRequestAttributes(attributes);  新线程里面执行这
 7. 多任务
    - allOf: 等待所有任务完成
    - anyOf:  只要有一个任务完成
+8. spring的优雅异步
+   - @EnableAsync 主类上面开启异步,
+   - @Async 先写一个接口,然后实现这个接口,在这个接口类上面开始异步注解,或者在方法上面开启
+   - 被异步的类独有的方法,可以通过异步类去继承这个被异步类,从而获取它的都有方法.异步类需要实现自己的接口
 
 ## 总结代码
 
