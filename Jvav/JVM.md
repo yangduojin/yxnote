@@ -285,6 +285,15 @@ jps 查看进程的id号 , jstack +看jps得到的pid号 可以查看线程当�
 
 安装插件网络有问题,自己看java版本的后缀,去<https://visualvm.github.io/pluginscenters.html> 这个里面对应的地方下载插件到本地,安装工具里面有添加本地插件,选择文件安装即可
 
+如何查看对象大小：
+
+1. 可添加日志，这些对象的大小打印出来再次运行。打印对象大小，lucene-core里有提供RamUsageEstimator类直接使用。java内部查看内存大小的方法，私有，需要hack。
+2. 可借助工具，比如jvisualvm等，分析内存dump文件。
+
+如何查看可用内存大小
+
+jmap -heap命令可查看目前jvm的实际配置。jmap -histo:live可查看内存切面信息。在上面已经做了查看对象大小处理，还要查看内存切面信息是为了估算其他正常对象的大小，从内存估算中除去。因为在jmap -histo:live看到[C（char型）的大小、java.lang.String的大小一般是打印日志产生的、[I(整数型)一般是上报监控数据产生的正常数据。却是占比最大的。
+
 ## JVM的生命周期
 
 ### 虚拟机的启动
