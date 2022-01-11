@@ -256,7 +256,7 @@ React 和 Vue 就算你再精通也好，都只是历史进程这台机器上某
 - spring全家桶spring，mvc , boot , cloud
 - 中间件：redis , mq , elasticsearch
 - Docker  , git , linux
-- 基础再提高： 计算机基础，计算机组成原理 ， 计算机网络，操作系统，数据结构算法
+- 基础再提高： 计算机基础，计算机组成原理，计算机网络，操作系统，数据结构算法
 - Mysql 优化 ，日志，索引，
 - Netty 源码
 - 手动复写流行框架 ，加深理解
@@ -287,6 +287,8 @@ React 和 Vue 就算你再精通也好，都只是历史进程这台机器上某
 - 我能用来做玩具的语言有：Python、JavaScript、Visual Basic、Scratch、Bash。
 - 我摸过一下下的语言有：Java、C#、Ruby、Objective-C、COBOL、Scheme。
 - 题主有空问这个问题不如花几天时间把Go学会，Go是超级简单好学的语言之一。
+- 熟悉Unix/Linux操作系统下的C/C++开发，熟悉C++和面向对象技术，熟悉数据库开发；
+- 熟悉TCP/IP协议相关知识，精通网络编程、熟悉或使用国际化开发框架或sdk、熟悉MYSQL或其他大型数据库；
 
 ## 书籍和经验杂谈
 

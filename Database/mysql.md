@@ -7,22 +7,22 @@
       - [MyISAM](#myisam)
       - [InnoDB](#innodb)
       - [约束分类](#约束分类)
-    - [事务 & MVCC](#事务--mvcc)
+    - [事务&MVCC](#事务mvcc)
       - [ACID,隔离级别和数据一致性问题](#acid隔离级别和数据一致性问题)
       - [MVCC 多版本并发控制](#mvcc-多版本并发控制)
         - [简述MySQL的MVCC多版本并发控制](#简述mysql的mvcc多版本并发控制)
-    - [DDL Data Definition Language](#ddl-data-definition-language)
-    - [DCL Data Control Language](#dcl-data-control-language)
-    - [DML Data Manipulation Language / DQL Data QueryLanguage](#dml-data-manipulation-language--dql-data-querylanguage)
+    - [DDL](#ddl)
+    - [DCL](#dcl)
+    - [DML / DQL](#dml--dql)
       - [行转列](#行转列)
       - [列转行](#列转行)
       - [Like 搭配通配符](#like-搭配通配符)
       - [比较运算符](#比较运算符)
         - [非符号运算符](#非符号运算符)
         - [逻辑运算符](#逻辑运算符)
-      - [JOIN / inner / outer  / union set / difference set](#join--inner--outer---union-set--difference-set)
+      - [多表7种连接方式](#多表7种连接方式)
         - [UNION和UNION ALL的区别](#union和union-all的区别)
-    - [单表查询比多表联查的好处](#单表查询比多表联查的好处)
+    - [单表比多表查的好处](#单表比多表查的好处)
   - [JDBC](#jdbc)
     - [JDBC连接方式最终版](#jdbc连接方式最终版)
     - [JDBC步骤](#jdbc步骤)
@@ -38,10 +38,11 @@
         - [GROUP BY关键字优化](#group-by关键字优化)
         - [关联查询优化](#关联查询优化)
         - [小表驱动大表](#小表驱动大表)
+        - [临时表优化](#临时表优化)
     - [索引失效七字口诀](#索引失效七字口诀)
     - [索引测试题](#索引测试题)
     - [覆盖索引](#覆盖索引)
-    - [索引条件下推 Index Condition Pushdown](#索引条件下推-index-condition-pushdown)
+    - [索引条件下推](#索引条件下推)
     - [EXPLAIN字段说明](#explain字段说明)
   - [主从复制](#主从复制)
     - [一主一从环境搭建](#一主一从环境搭建)
@@ -86,7 +87,7 @@ InnoDb:B+ data就是索引文件，辅助索引data域是相应记录主键的�
 - UNIQUE，支持列级约束以及表级约束。
 - FORGIEN KEY，用于限制两个表间的关系。支持表级约束。
 
-### 事务 & MVCC
+### 事务&MVCC
 
 隐式 无明显的开启结束标记 dml的insert,update,delete  
 显式 有明显的开启结束标记 步骤 如下
@@ -169,7 +170,9 @@ MVCC会在新开启一个事务时，给事务里包含的每行记录添加一�
 
 应用：mvcc很常见的并发控制手段，如当前状态是订单未提交，则更新时update XXX set status='订单已提交' where status='订单未提交'，如果执行这条语句时，status已经发生了改变，这条语句就执行失败了
 
-### DDL Data Definition Language
+### DDL
+
+Data Definition Language
 
 ``create`` ``alter``  ``drop``  ``rename``  ``truncate`` 都自动提交 `commit` 且不受 ``set autocommit = false`` 影响, ``rollback`` 对DDL操作都失效
 
@@ -215,11 +218,17 @@ MVCC会在新开启一个事务时，给事务里包含的每行记录添加一�
 
 ``ALTER TABLE emp4 ADD CONSTRAINT emp4_email_uk UNIQUE(id)``
 
-### DCL Data Control Language
+### DCL
+
+Data Control Language
 
 ``commit`` ``rollback`` ``grant`` ``revoke`` ``savepoint``
 
-### DML Data Manipulation Language / DQL Data QueryLanguage
+### DML / DQL
+
+Data Manipulation Language
+
+Data QueryLanguage
 
 ``insert``  ``delete``  ``update`` 逻辑删除,自增继续,会返回受影响的行数,支持回滚
 
@@ -423,7 +432,9 @@ set session transaction isolation level read uncommitted  当前会话会显示�
 
 ![sevenJoin](img/sevenJoin.png)
 
-#### JOIN / inner / outer  / union set / difference set
+#### 多表7种连接方式
+
+JOIN / inner / outer  / union set / difference set
 
 ```sql
 //INNER JOIN
@@ -498,7 +509,7 @@ Max/min/count/avg/sum 只适用数字,全都忽视null
 
 ![mysqlBase](img/mysqlBase.jpg)
 
-### 单表查询比多表联查的好处
+### 单表比多表查的好处
 
 1. 让缓存的效率更高
 2. 许多应用程序可以方便地缓存单表查询对应的结果对象。另外对于MySQL的查询缓存来说，如果关联中的某+个表发生了变化，那么就无法使用查询缓存了，而拆分后，如果某个表很少改变，那么基于该表的查询就可以重复利用查询缓存结果了
@@ -715,35 +726,35 @@ InnoDB存储引擎的最小存储单元是页，页可以用于存放数据也�
 
 ##### order by优化
 
-出现在orderby后面, extra 会显示 filesort 解决办法
+   出现在orderby后面, extra 会显示 filesort 解决办法
 
-1. 排序优化
-   - 尽量使用Index方式排序,避免使用FileSort方式排序
-   - mysql查询只使用一个索引，因此如果where子句中已经使用了索引的话，那么order by中的列是不会使用索引的。因此数据库默认排序可以符合要求的情况下不要使用排序操作；尽量不要包含多个列的排序，如果需要最好给这些列创建复合索引。
-2. 无过滤不索引
-   - 如果有order by 最好在后面加上limit 才会走索引
-   - explain select SQL_NO_CACHE * from emp order by age,deptid;
-   - explain select SQL_NO_CACHE * from emp order by age,deptid limit 10;
-   - create index idx_age_deptid on emp (age,deptid)
-3. 顺序错，也会filesort
-   - create index idx_age_deptid_name on emp (age,deptid,name)
-   - explain select * from emp where age=45 order by deptid;
-   - explain select * from emp where age=45 order by deptid,name;
-   - explain select * from emp where age=45 order by deptid,empno;
-   - explain select * from emp where age=45 order by name,deptid;
-   - explain select * from emp where deptid=45 order by age;
-4. 方向反必排序
-   - explain select * from emp where age=45 order by deptid desc,name desc;默认升序
-   - explain select * from emp where age=45 order by deptid asc,name desc;
-5. 索引的选择
-   - 索引选择常用的,不然查询结果差别很大
-6. 双路排序和单路排序
-   - 如果不在索引列上，filesort有两种算法，mysql就要启动双路排序和单路排序
-   - 怎么提升内存
-   - 尝试提高 sort_buffer_size
-   - 不管用哪种算法，提高这个参数都会提高效率，当然，要根据系统的能力去提高，因为这个参数是针对每个进程的1M-8M之间调整
-   - 尝试提高 max_length_for_sort_data
-   - 提高这个参数,会增加用改进算法的概率。但是如果设的太高，数据总容量超出sort_buffer_size的概率就增大，明显症状是高的磁盘I/O活动和低的处理器使用率.1024-8192之间调整
+   1. 排序优化
+      - 尽量使用Index方式排序,避免使用FileSort方式排序
+      - mysql查询只使用一个索引，因此如果where子句中已经使用了索引的话，那么order by中的列是不会使用索引的。因此数据库默认排序可以符合要求的情况下不要使用排序操作；尽量不要包含多个列的排序，如果需要最好给这些列创建复合索引。
+   2. 无过滤不索引
+      - 如果有order by 最好在后面加上limit 才会走索引
+      - explain select SQL_NO_CACHE * from emp order by age,deptid;
+      - explain select SQL_NO_CACHE * from emp order by age,deptid limit 10;
+      - create index idx_age_deptid on emp (age,deptid)
+   3. 顺序错，也会filesort
+      - create index idx_age_deptid_name on emp (age,deptid,name)
+      - explain select * from emp where age=45 order by deptid;
+      - explain select * from emp where age=45 order by deptid,name;
+      - explain select * from emp where age=45 order by deptid,empno;
+      - explain select * from emp where age=45 order by name,deptid;
+      - explain select * from emp where deptid=45 order by age;
+   4. 方向反必排序
+      - explain select * from emp where age=45 order by deptid desc,name desc;默认升序
+      - explain select * from emp where age=45 order by deptid asc,name desc;
+   5. 索引的选择
+      - 索引选择常用的,不然查询结果差别很大
+   6. 双路排序和单路排序
+      - 如果不在索引列上，filesort有两种算法，mysql就要启动双路排序和单路排序
+      - 怎么提升内存
+      - 尝试提高 sort_buffer_size
+      - 不管用哪种算法，提高这个参数都会提高效率，当然，要根据系统的能力去提高，因为这个参数是针对每个进程的1M-8M之间调整
+      - 尝试提高 max_length_for_sort_data
+      - 提高这个参数,会增加用改进算法的概率。但是如果设的太高，数据总容量超出sort_buffer_size的概率就增大，明显症状是高的磁盘I/O活动和低的处理器使用率.1024-8192之间调整
 
 ##### GROUP BY关键字优化
 
@@ -771,6 +782,10 @@ InnoDB存储引擎的最小存储单元是页，页可以用于存放数据也�
 - 右表的条件列一定要加上索引
 - inner自动选择驱动表,left join 选择左面表
 - 如果小的循环在外层，对于数据库连接来说就只连接5次，进行5000次操作，如果1000在外，则需要进行1000次数据库连接，从而浪费资源，增加消耗。这就是为什么要小表驱动大表。
+
+##### 临时表优化
+
+[原文地址](https://zhuanlan.zhihu.com/p/64520100)
 
 ### 索引失效七字口诀
 
@@ -891,7 +906,9 @@ where
 - 能够命中name索引，索引叶子节点存储了主键id，通过name的索引树即可获取id和name，无需回表，符合索引覆盖，效率较高。
 - 覆盖索引就是指索引中包含了查询中的所有字段，这种情况下就不需要再进行回表查询了
 
-### 索引条件下推 Index Condition Pushdown
+### 索引条件下推
+
+Index Condition Pushdown
 
 - SELECT * from user where  name like '陈%' and age=20; id、name、age、address。建立联合索引(name，age)
 - 没有下推就会忽视age 先去查name匹配的索引，根据索引查列数据，匹配age回表两次

@@ -2,10 +2,14 @@
 
 - [数据结构和算法](#数据结构和算法)
   - [数据结构分类](#数据结构分类)
-  - [排序算法](#排序算法)
-    - [归并排序](#归并排序)
-    - [归并迭代](#归并迭代)
-    - [快速排序](#快速排序)
+  - [算法](#算法)
+    - [排序算法](#排序算法)
+      - [归并排序](#归并排序)
+      - [归并迭代](#归并迭代)
+      - [快速排序](#快速排序)
+    - [LRU算法原理及其实现](#lru算法原理及其实现)
+      - [LRU算法实现思路](#lru算法实现思路)
+      - [LRU的简单实现](#lru的简单实现)
   - [二叉树(平衡 不平衡 )](#二叉树平衡-不平衡-)
     - [红黑树](#红黑树)
     - [多叉树 2-3-4 树](#多叉树-2-3-4-树)
@@ -35,7 +39,9 @@
 | 堆       | 插入删除快，对最大数据项的存取很快(堆是特殊的二叉树？),对其他数据项存取很慢                                   |
 | 图       | 对现实世界建模,有些算法慢且复杂                                                                               |
 
-## 排序算法
+## 算法
+
+### 排序算法
 
 | 种类     | 特点                                                                   |
 | -------- | ---------------------------------------------------------------------- |
@@ -48,7 +54,7 @@
 
 Log 以2为底数转换到以10为底数 需*3.322 得到大概值
 
-### 归并排序
+#### 归并排序
 
 i = 0 ; arr2[i++] = arr[i++]; 从左到右开始计算， arr2[0] = arr[1],最后i = 2;
 
@@ -91,7 +97,7 @@ public static void sort2(int []arr){
     }
 ```
 
-### 归并迭代
+#### 归并迭代
 
 ```java
 public static void merge_sort(int[] arr) {
@@ -153,7 +159,7 @@ public static void merge_sort(int[] arr) {
 }
 ```
 
-### 快速排序
+#### 快速排序
 
 找一个基准值，所有比基准小的放基准前面，大的放基准后面
 
@@ -206,6 +212,157 @@ private static void quickSort2(int[] arr, int low, int high) {
         arr[low] = tmp;// 将基准值放入正确的位置
         return low; // 返回tmp的正确位置}}
 ```
+
+### LRU算法原理及其实现
+
+LRU(Least Recently Used) 即最近最少使用，属于典型的内存淘汰机制。
+
+#### LRU算法实现思路
+
+根据LRU算法的理念，我们需要：
+
+1. 一个参数cap来作为最大容量
+2. 一种数据结构来存储数据，并且需要1. 轻易地更新最新的访问的数据。2. 轻易地找出最近最少被使用的数据，当到达cap时，清理掉。
+
+在这里，我们用到的数据结构是：hashmap+双向链表。
+
+1. 利用hashmap的get、put方法O(1)的时间复杂度，快速取、存数据。
+2. 利用doublelinkedlist的特征（可以访问到某个节点之前和之后的节点），实现O(1)的新增和删除数据。
+
+![当key2再次被使用时，它所对应的node3被更新到链表头部。](./img/LRUFirst.png)
+
+当key2再次被使用时，它所对应的node3被更新到链表头部。
+
+![假设cap=3，当key4创建、被访问后，处于链表尾部的node2将被淘汰，key1将被清楚。](./img/LRUsecond.png)
+
+假设cap=3，当key4创建、被访问后，处于链表尾部的node2将被淘汰，key1将被清楚。
+
+#### LRU的简单实现
+
+1. 节点node,存放key、val值、前节点、后节点
+
+    ```java
+    class Node{
+        public int key;
+        public int val;
+        public Node next;
+        public Node previous;
+
+        public Node() {}
+
+        public Node(int key, int val) {
+            this.key = key;
+            this.val = val;}}
+    ```
+
+2. 双向链表，属性有size、头节点、尾节点。
+
+    addFirst(): 头插法入链表
+    remove(): 删除最后一个节点
+    remove(Node node):删除特定节点
+    size()：获取链表长度
+
+    ```java
+    class DoubleList{
+        private int size;
+        private Node head;
+        private Node tail;
+
+        public DoubleList() {
+            this.head = new Node();
+            this.tail = new Node();
+            size = 0;
+            head.next = tail;
+            tail.previous = head;}
+
+        public void addFirst(Node node){
+            Node temp = head.next;
+            head.next = node;
+            node.previous = head;
+            node.next = temp;
+            temp.previous = node;
+            size++;}
+
+        public void remove(Node node){
+            if(null==node|| node.previous==null|| node.next==null){
+                return;}
+
+            node.previous.next = node.next;
+            node.next.previous = node.previous;
+            node.next=null;
+            node.previous=null;
+            size--;}
+
+        public void remove(){
+            if(size<=0) return;
+            Node temp = tail.previous;
+            temp.previous.next = temp.next;
+            tail.previous = temp.previous;
+            temp.next = null;
+            temp.previous=null;
+            size--;}
+
+        public int size(){
+            return size;}}
+    ```
+
+3. LRU算法实现类
+
+    get(int key): 为null返回-1
+    put(int key, int value)
+
+    若map中有，删除原节点，增加新节点
+    若map中没有，map和链表中新增新数据。
+
+    ```java
+    public class LRUCache {
+
+        Map<Integer,Node> map;
+        DoubleList cache;
+        int cap;
+
+
+        public LRUCache(int cap) {
+            map = new HashMap<>();
+            cache = new DoubleList();
+            this.cap = cap;}
+
+        public int get(int key){
+            Node node = map.get(key);
+            return  node==null? -1:node.val;}
+
+        public void put(int key, int val){
+            Node node = new Node(key,val);
+            if(map.get(key)!=null){
+                cache.remove(map.get(key));
+                cache.addFirst(node);
+                map.put(key,node);
+                return;}
+
+            map.put(key,node);
+            cache.addFirst(node);
+            if(cache.size()>cap){
+                cache.remove();}}
+
+        public static void main(String[] args) {
+            //test, cap = 3
+            LRUCache lruCache = new LRUCache(3);
+            lruCache.put(1,1);
+            lruCache.put(2,2);
+            lruCache.put(3,3);
+            //<1,1>来到链表头部
+            lruCache.put(1,1);
+            //<4,4>来到链表头部， <2,2>被淘汰。
+            lruCache.put(4,4);}}
+    ```
+
+4. LRU应用场景
+
+- 底层的内存管理，页面置换算法
+- 一般的缓存服务，memcache\redis之类
+- 部分业务场景
+
+[参考文档地址](http://doumaomao.github.io/blog/LRU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF.html)
 
 ## 二叉树(平衡 不平衡 )
 
