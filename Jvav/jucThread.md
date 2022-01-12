@@ -45,6 +45,11 @@
 - Callable接口+FutureTask 可拿到返回结果,可处理异常
 - ThreadPoolExecutor
 
+多线程本质
+
+1. 利用多核。
+2. 当I/O阻塞系统，但CPU空闲的时候，可以利用多线程使用CPU资源。
+
 ![对象头详情](/Jvav/img/objectHeadMarkWord.png)
 
 ### Wait 和 Sleep的区别

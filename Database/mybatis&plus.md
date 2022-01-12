@@ -94,6 +94,18 @@
     </where>
 </select>
 
+<select id="queryBookInfo" parameterType="com.ths.platform.entity.BookInfo" resultType="java.lang.Integer">
+    select count(*) from t_book t
+    <where>
+        <if test="title !=null and title !='' ">
+            title = #{title}
+        </if>
+        <if test="author !=null and author !='' ">
+            AND author = #{author}
+        </if>
+    </where>
+</select>
+
 // foreach 单简单参数
 <select id="findEmp5" resultType="employee">
     select emp_id empId,emp_name  empName ,emp_salary empSalary  from t_emp where emp_id in

@@ -11,6 +11,7 @@
       - [ACID,隔离级别和数据一致性问题](#acid隔离级别和数据一致性问题)
       - [MVCC 多版本并发控制](#mvcc-多版本并发控制)
         - [简述MySQL的MVCC多版本并发控制](#简述mysql的mvcc多版本并发控制)
+      - [select加锁分析](#select加锁分析)
     - [DDL](#ddl)
     - [DCL](#dcl)
     - [DML / DQL](#dml--dql)
@@ -89,17 +90,6 @@ InnoDb:B+ data就是索引文件，辅助索引data域是相应记录主键的�
 
 ### 事务&MVCC
 
-隐式 无明显的开启结束标记 dml的insert,update,delete  
-显式 有明显的开启结束标记 步骤 如下
-
-1. 取消隐式事务自动开启的功能 set autocommit = 0,start transaction
-2. 编写事务需要的sql语句(一条或多条)
-   - update xxx set xxx where xxx
-   - update xxx set xxx where xxx
-3. 结束事务
-   - 正常提交 commit
-   - 回滚 rollback
-
 Mysql 锁
 
 - 表级锁：开销小，加锁快。不会出现死锁，锁定粒度大，发生锁冲突的概率高，并发度低。
@@ -169,6 +159,23 @@ Mvcc + 乐观锁、 mvcc + 悲观锁 最大程度提高并发性能，解决读�
 MVCC会在新开启一个事务时，给事务里包含的每行记录添加一个当前事务ID和回滚指针。并包含一个Read View，Read View里保存了当前活跃的事务列表，小于这些列表的最近的事务ID(自增)才是可见的。这样保证了读到的都是已提交的事务。
 
 应用：mvcc很常见的并发控制手段，如当前状态是订单未提交，则更新时update XXX set status='订单已提交' where status='订单未提交'，如果执行这条语句时，status已经发生了改变，这条语句就执行失败了
+
+#### select加锁分析
+
+```sql
+select * from table where id = ?
+select * from table where id < ?
+select * from table where id = ? lock in share mode
+select * from table where id < ? lock in share mode
+select * from table where id = ? for update
+select * from table where id < ? for update
+```
+
+如果你能清楚的说出，这六句sql在不同的事务隔离级别下，是否加锁，加的是共享锁还是排他锁，是否存在间隙锁，那这篇文章就没有看的意义了。
+
+- innodb一定存在聚簇索引，默认以主键作为聚簇索引
+- 有几个索引，就有几棵B+树(不考虑hash索引的情形)
+- 聚簇索引的叶子节点为磁盘上的真实数据。非聚簇索引的叶子节点还是索引，指向聚簇索引B+树。
 
 ### DDL
 
@@ -616,6 +623,10 @@ InnoDB存储引擎的最小存储单元是页，页可以用于存放数据也�
 | 外键列             | 应           | 应             |
 | 主键列             | 应           | 应             |
 | 频繁修改索引列     | 不应         | 应             |
+
+- innodb一定存在聚簇索引，默认以主键作为聚簇索引
+- 有几个索引，就有几棵B+树(不考虑hash索引的情形)
+- 聚簇索引的叶子节点为磁盘上的真实数据。非聚簇索引的叶子节点还是索引，指向聚簇索引B+树。
 
 ### 索引树
 
