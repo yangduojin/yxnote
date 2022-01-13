@@ -40,3 +40,13 @@ AssertJ 流式断言
 Springboot 测试类
 @RunWith
 @SpringApplicationConfiguration(classes = 入口类.class)加载环境
+
+## 书籍
+
+1. 书籍包括《测试驱动开发》、《重构》、《BDD In Action》以及《系统思考》等，从而充分理解TDD优点和局限。
+
+## 收集的文章
+
+1. 单测的意义 [不好写单测的代码都是烂代码](https://zhenbianshu.github.io/2019/10/talk_about_unit_test.html)
+2. 有些公司限制一个方法不超过 10 行
+3. 有注释的地方都可以抽取方法，用方法名来代替注释：
