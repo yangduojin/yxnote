@@ -208,6 +208,8 @@ jdk7和jdk8中通过Vector()构造器创建对象时，底层都创建了长度�
   - 当数组的某一个索引位置上的元素以链表形式存在的数据个数 > 8 且当前数组的长度 > 64时，
   - 此时此索引位置上的所数据改为使用红黑树存储。
 
+![hashmap插入数据的流程](./hashmapInsert.png)
+
 - 常量
 
   - DEFAULT_INITIAL_CAPACITY : HashMap的默认容量，16

@@ -59,6 +59,8 @@ bean的范围: Singleton(default)  /  Prototype  /  Session  /  Rquest
 12. 调用自定义销毁方法
 13. 结束
 
+![获取bean的流程](./img/getBean.png)
+
 > 另一个版本
 
 ![bean生命周期2](./img/beanLifeCycle2.jpg)

@@ -162,6 +162,8 @@ MVCC会在新开启一个事务时，给事务里包含的每行记录添加一�
 
 #### select加锁分析
 
+[select加锁分析 原文地址如下https://www.cnblogs.com/rjzheng/p/9950951.html](https://www.cnblogs.com/rjzheng/p/9950951.html)
+
 ```sql
 select * from table where id = ?
 select * from table where id < ?
@@ -176,6 +178,70 @@ select * from table where id < ? for update
 - innodb一定存在聚簇索引，默认以主键作为聚簇索引
 - 有几个索引，就有几棵B+树(不考虑hash索引的情形)
 - 聚簇索引的叶子节点为磁盘上的真实数据。非聚簇索引的叶子节点还是索引，指向聚簇索引B+树。
+
+锁类型
+
+- 共享锁(S锁):假设事务T1对数据A加上共享锁，那么事务T2可以读数据A，不能修改数据A。
+- 排他锁(X锁):假设事务T1对数据A加上共享锁，那么事务T2不能读数据A，不能修改数据A。
+
+我们通过update、delete等语句加上的锁都是行级别的锁。只有LOCK TABLE … READ和LOCK TABLE … WRITE才能申请表级别的锁。
+
+- 意向共享锁(IS锁):一个事务在获取（任何一行/或者全表）S锁之前，一定会先在所在的表上加IS锁。
+- 意向排他锁(IX锁):一个事务在获取（任何一行/或者全表）X锁之前，一定会先在所在的表上加IX锁。
+
+意向锁存在的目的?
+
+> OK，这里说一下意向锁存在的目的。假设事务T1，用X锁来锁住了表上的几条记录，那么此时表上存在IX锁，即意向排他锁。那么此时事务T2要进行LOCK TABLE … WRITE的表级别锁的请求，可以直接根据意向锁是否存在而判断是否有锁冲突。
+
+先只介绍3种锁,[更多细节查看官方文档 https://dev.mysql.com/doc/refman/5.7/en/innodb-locking.html](https://dev.mysql.com/doc/refman/5.7/en/innodb-locking.html)
+
+- Record Locks：简单翻译为行锁吧。注意了，该锁是对索引记录进行加锁！锁是在加索引上而不是行上的。注意了，innodb一定存在聚簇索引，因此行锁最终都会落到聚簇索引上！
+- Gap Locks：简单翻译为间隙锁，是对索引的间隙加锁，其目的只有一个，防止其他事物插入数据。在Read Committed隔离级别下，不会使用间隙锁。这里我对官网补充一下，隔离级别比Read Committed低的情况下，也不会使用间隙锁，如隔离级别为Read Uncommited时，也不存在间隙锁。当隔离级别为Repeatable Read和Serializable时，就会存在间隙锁。
+- Next-Key Locks：这个理解为Record Lock+索引前面的Gap Lock。记住了，锁住的是索引前面的间隙！比如一个索引包含值，10，11，13和20。那么，间隙锁的范围如下
+
+```sql
+(negative infinity, 10]
+(10, 11]
+(11, 13]
+(13, 20]
+(20, positive infinity)
+```
+
+在mysql中select分为快照读和当前读，执行下面的语句
+
+``select * from table where id = ?;``
+
+执行的是快照读，读的是数据库记录的快照版本，是不加锁的。（这种说法在隔离级别为Serializable中不成立，后面我会补充。）
+
+那么，执行``select * from table where id = ? lock in share mode;``会对读取记录加S锁 (共享锁)
+
+执行``select * from table where id = ? for update``会对读取记录加X锁 (排他锁)
+
+事务隔离级别
+
+- Read Uncommited(RU)：读未提交，一个事务可以读到另一个事务未提交的数据！
+- Read Committed (RC)：读已提交，一个事务可以读到另一个事务已提交的数据!
+- Repeatable Read (RR):可重复读，加入间隙锁，一定程度上避免了幻读的产生！注意了，只是一定程度上，并没有完全避免!我会在下一篇文章说明!另外就是记住从该级别才开始加入间隙锁(这句话记下来，后面有用到)!
+- Serializable：串行化，该级别下读写串行化，且所有的select语句后都自动加上lock in share mode，即使用了共享锁。因此在该隔离级别下，使用的是当前读，而不是快照读。
+
+> InnoDB行锁是通过给索引上的索引项加锁来实现的，这一点MySQL与Oracle不同，后者是通过在数据块中对相应数据行加锁来实现的。 InnoDB这种行锁实现特点意味着：只有通过索引条件检索数据，InnoDB才使用行级锁，否则，InnoDB将使用表锁！
+
+错误一:并不是用表锁来实现锁表的操作，而是利用了Next-Key Locks，也可以理解为是用了行锁+间隙锁来实现锁表的操作!
+
+| pId(int) | name(varchar) | num(int) |
+| -------- | ------------- | -------- |
+| 1        | aaa           | 100      |
+| 2        | bbb           | 200      |
+| 7        | ccc           | 200      |
+
+执行语句(name列无索引)  
+``select * from table where name = `aaa` for update``  
+那么此时在pId=1,2,7这三条记录上存在行锁(把行锁住了)。另外，在(-∞,1)(1,2)(2,7)(7,+∞)上存在间隙锁(把间隙锁住了)。因此，给人一种整个表锁住的错觉！  
+对该结论有疑问的，可自行执行show engine innodb status;语句进行分析。
+
+错误二:所有文章都不提隔离级别！  
+注意我上面说的，之所以能够锁表，是通过行锁+间隙锁来实现的。那么，RU和RC都不存在间隙锁，这种说法在RU和RC中还能成立么？  
+因此，该说法只在RR和Serializable中是成立的。如果隔离级别为RU和RC，无论条件列上是否有索引，都不会锁表，只锁行！  
 
 ### DDL
 
