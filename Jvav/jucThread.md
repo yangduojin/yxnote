@@ -441,7 +441,7 @@ class Phone {
 
 ThreadPoolExecutor(
 
-1. int corePoolSize,                    常驻核心线程数
+1. int corePoolSize,                   常驻核心线程数(启动之后就会尽快达到常驻数)
 1. int maximumPoolSize,                最大同时执行线程数,任务多就会增加到最大，数目 = 逻辑处理器+1
 1. long keepAliveTime,                 多余的空闲线程存活时间,数目恢复到常驻数
 1. TimeUnit unit,                      KeepAliveTime的单位
@@ -456,6 +456,11 @@ ThreadPoolExecutor(
 - cpu密集型：Runtime.getRuntime().availableProcessors()逻辑处理器+1
 - io密集型：1. 线程并不是一直在执行任务,配置尽可能多的线程,如cpu数*2;2.cpu核数/(1-阻塞系数) 阻塞系数在0.8~0.9之间
 ex: 8核cpu: 8/(1-0.9) = 80.0 个线程数
+
+并发量计算
+
+- 计算并发量，我一般的经验值是 ``QPS*平均响应时间``，再留上一倍的冗余，但如果业务重要的话，BlockingQueue Size 设置大一些也无妨（1000 或以上），毕竟每个任务占用的内存量很有限。
+- 并发量计算一定要考虑到 GC 时间内堆积的请求同时被受理的情况，堆积的请求数可以通过 QPS*GC时间 来简单得出，还有一定要记得留出冗余。
 
 #### 4种拒绝策略: 都是 ThreadPoolExecutor 的静态内部类
 
