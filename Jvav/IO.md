@@ -112,8 +112,8 @@ public boolean delete();// 删除文件或文件夹，不走回收站，删除�
     process(buffer);}
     ```
 
-1. IO多路复用（IO Multiplexing）：即经典的Reactor设计模式，有时也称为异步阻塞IO，Java中的Selector和Linux中的epoll都是这种模型。
-2. 异步IO（Asynchronous IO）：即经典的Proactor设计模式，也称为异步非阻塞IO。
+3. IO多路复用（IO Multiplexing）：即经典的Reactor设计模式，有时也称为异步阻塞IO，Java中的Selector和Linux中的epoll都是这种模型。
+4. 异步IO（Asynchronous IO）：即经典的Proactor设计模式，也称为异步非阻塞IO。
 
 **同步和异步**的概念描述的是用户线程与内核的交互方式：同步是指用户线程发起IO请求后需要等待或者轮询内核IO操作完成后才能继续执行；而异步是指用户线程发起IO请求后仍继续执行，当内核IO操作完成后会通知用户线程，或者调用用户线程注册的回调函数。
 

@@ -69,9 +69,12 @@
 6. Stream流
    - RadixTree
 7. bitmap位图
+   1. 拿到ASCII码二进制8位,从0开始,操作二进制码可以零存整取,零存零取,整存零取;如果对应位的字节是不可打印字符,会显示该字符的十六进制形式
+   ![redis位图](./img/redisBit.png)
 8. pubsub
 9. geo地理位置
 10. hyperloglog基数统计
+11. BloomFilter
 
 ### 存入StringJSON的转换和提取
 
@@ -84,14 +87,14 @@
 ## 持久化
 
 - RDB
-  - 快照读,fork一个进程，先将数据写入临时文件中，待上次持久化结束后，会将该临时文件替换场次的持久化文件，比aof效率高，但是最后一次数据可能会丢失
+  - 快照读,使用操作系统的多进程COW机制,fork一个进程，先将数据写入临时文件中，待上次持久化结束后，会将该临时文件替换场次的持久化文件，比aof效率高，但是最后一次数据可能会丢失
   - 每个redis实例只会存一份rdb文件
   - 可以通过save,bgsave来调用
   - 二进制文件,lzf
   - Fork：在linux中，fork()跟主进程一样的子进程，效率考虑，主,子进程会公用一段物理内存，当发生改变的时候，才会把主进程"写时复制"一份给子进程
 - AOF
-  - 类似 binlog 机制,可以做到不丢数据,默认不开启，每秒记录一次，宕机该秒数据可能会消失，超过一定大小就会将之前的数据转为rdb保存
-  - 每次数据操作调用 flushAppendOnlyFile 文件来刷新aof
+  - 类似 binlog 机制,存储的是redis服务器的顺序指令序列,只记录对内存进行修改的指令记录;可以做到不丢数据,默认不开启，每秒记录一次，宕机该秒数据可能会消失，超过一定大小就会将之前的数据转为rdb保存
+  - 每次数据操作调用 flushAppendOnlyFile 文件来刷新aof;redis收到客户端的修改指令后,先参数校验,逻辑处理,再存储到aof日志中(与leveldb,hbase先存储,再逻辑处理不一样)
   - 每次操作都需要 fsync ,前台线程阻塞
     - always
     - every sec
@@ -473,7 +476,7 @@ linux的buffers/cached
 - Ltrim key start end
 - Lset key index new v
 - Rpoplpush
-- Blpop/Brpop key [key…] timeout 阻塞
+- Blpop/Brpop key [key…] timeout 阻塞读,队列没有消息会休眠,一旦数据到来,立即醒来,但是会出现空闲连接,闲置过久服务器会断开连接,这两个命令会报错,要捕获错误并重试
 - Lpush + blpop
 - lpush+lpop=Stack(栈)
 - lpush+rpop=Queue(队列)
