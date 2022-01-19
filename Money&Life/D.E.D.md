@@ -31,6 +31,7 @@
 29. It's a pain 'cuz my fridge is ... I dumped it today. and the food's gone.
 30. He says he was simply going by the book when it comes to landing without gear, and that he and his fellow pilots train for these type of incidents.
 31. It is the vegetable some love to hate! But now a new breed of broccoli -- super broccoli -- developed in Britain may protect against heart disease--even some kinds of cancer.
+32. Mayor Sam Adams ordered
 
 
 we hoped that they could find... / we hope that they will find...
