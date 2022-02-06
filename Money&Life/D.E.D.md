@@ -1,6 +1,7 @@
 # DED
 
 1. S N L / d t th / he her him his had has have
+   - to : da ta duh tuh d' t' too
 2. Mother Teresa, who received a Nobel Peace Prize for her work on behalf of the poor ,dies in  Calcuha , India - she was 87 years old.
 3. Jerry ,What time do you have ? I have five o’clock.
 4. There are three things i have learned never to discuss with people ,religion ,politics and the Great Pumpkin!
