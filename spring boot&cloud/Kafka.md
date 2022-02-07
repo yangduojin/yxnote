@@ -1,7 +1,12 @@
 # Kafka
 
 - [Kafka](#kafka)
+  - [MQ对比](#mq对比)
   - [docker 安装](#docker-安装)
+
+## MQ对比
+
+![主流mq对比](img/MQ.jpg)
 
 ## docker 安装
 

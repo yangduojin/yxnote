@@ -125,6 +125,8 @@ public boolean delete();// 删除文件或文件夹，不走回收站，删除�
 
 ### 零拷贝
 
+[文章参考,非常详细](https://mp.weixin.qq.com/s/5MdF4dt0X1anqtFPoLOKeA)
+
 1. 将静态图片展示给客户(先将静态内容从磁盘中拷贝出来放到一个内存buf中，然后将这个buf通过socket传输给用户，进而用户或者静态内容的展示)
    - 首先，调用read时，文件A拷贝到了kernel模式；
    - 之后，CPU控制将kernel模式数据copy到user模式下；
@@ -141,4 +143,3 @@ public boolean delete();// 删除文件或文件夹，不走回收站，删除�
    - 根据socket buffer中的位置和偏移量直接将kernel buffer的数据copy到网卡设备（protocol engine）中；
 
 经过上述过程，数据只经过了2次copy就从磁盘传送出去了。这个才是真正的Zero-Copy(这里的零拷贝是针对kernel来讲的，数据在kernel模式下是Zero-Copy)。
-

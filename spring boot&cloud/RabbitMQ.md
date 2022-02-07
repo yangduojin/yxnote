@@ -19,7 +19,7 @@
     - [消息的应答模式](#消息的应答模式)
     - [可靠投递机制](#可靠投递机制)
     - [幂等性](#幂等性)
-  - [RabbitMQ](#rabbitmq-2)
+  - [RabbitMQ组件](#rabbitmq组件)
   - [备份交换机](#备份交换机)
 
 ## 为什么使用MQ
@@ -220,7 +220,7 @@ public void receiveMessageA(Message message, OrderEntity orderEntity, Channel ch
 
 @RabbitListener / JmsAutoConfiguration RabbitAutoConfiguration
 
-## RabbitMQ
+## RabbitMQ组件
 
 ![rabbitmqBase](/spring%20boot&cloud/img/rabbitmqBase.png)
 
