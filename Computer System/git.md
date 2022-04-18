@@ -21,7 +21,7 @@
 
 后面的两个网站  将ip如这种格式 加入hosts里面, ``C:\Windows\System32\drivers\etc``;因为Hosts无法保存拖到桌面用txt打开,linux同样如此.
 
-- git 登陆用token idea    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
+- git 登陆用token idea  yangduojin  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
 - gitee token   730ceedc144839080fae255ae9313050
 - Yang git ssh   git@github.com:yangduojin/book.git
 - Gitee ssh CxEWnzHF8dJl3PnmYgFn08PHMRqrRXFj9mt2vwGrySU
