@@ -50,20 +50,20 @@ InnoDb:B+ data就是索引文件，辅助索引data域是相应记录主键的�
 - **InnoDB**
 
   1. 关键特性
-     - 插入缓冲 Insert Buffer
-     - 两次写 Double Write
-     - 自适应哈希索引 Adaptive Hash Index
-     - 异步IO Async IO
-     - 刷新邻接页 Flush Neighbor Page
+  - 插入缓冲 Insert Buffer
+  - 两次写 Double Write
+  - 自适应哈希索引 Adaptive Hash Index
+  - 异步IO Async IO
+  - 刷新邻接页 Flush Neighbor Page
+
+</br>
 
 - **约束分类**
-
-- 约束分类
-  - NOT NULL。支持列级约束。
-  - DEFAULT，支持列级约束。
-  - PRIMARY KEY 支持列级约束以及表级约束。
-  - UNIQUE，支持列级约束以及表级约束。
-  - FORGIEN KEY，用于限制两个表间的关系。支持表级约束。
+  1. NOT NULL。支持列级约束。
+  2. DEFAULT，支持列级约束。
+  3. PRIMARY KEY 支持列级约束以及表级约束。
+  4. UNIQUE，支持列级约束以及表级约束。
+  5. FORGIEN KEY，用于限制两个表间的关系。支持表级约束。
 
 ## 事务&MVCC
 
