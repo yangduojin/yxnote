@@ -1,18 +1,17 @@
-# Spring
+# Spring 基础 及 MVC
 
-- [Spring](#spring)
-  - [基础](#基础)
-    - [Bean](#bean)
-      - [IOC & DI](#ioc--di)
-      - [bean范围](#bean范围)
-      - [bean生命周期](#bean生命周期)
-      - [对象交给spring管理的3种方式及应用](#对象交给spring管理的3种方式及应用)
-      - [三级缓存](#三级缓存)
-      - [自动配置原理](#自动配置原理)
+- [Spring 基础 及 MVC](#spring-基础-及-mvc)
+  - [Bean](#bean)
+    - [IOC & DI](#ioc--di)
+    - [bean范围](#bean范围)
+    - [bean创建及生命周期](#bean创建及生命周期)
+    - [对象交给Spring管理 与 类交给Spring管理(千万要注意他们的区别)](#对象交给spring管理-与-类交给spring管理千万要注意他们的区别)
+    - [三级缓存](#三级缓存)
+    - [自动配置原理](#自动配置原理)
     - [AOP](#aop)
-      - [环绕通知](#环绕通知)
-      - [事务](#事务)
-  - [SpringMVC](#springmvc)
+    - [环绕通知](#环绕通知)
+    - [事务](#事务)
+  - [SpringMVC(Restful之后普通的mvc流程已经不太符合了!)](#springmvcrestful之后普通的mvc流程已经不太符合了)
     - [Model、ModelMap、Map](#modelmodelmapmap)
   - [幂等性](#幂等性)
     - [token 机制](#token-机制)
@@ -26,22 +25,20 @@
     - [防重表](#防重表)
     - [全局请求唯一 id](#全局请求唯一-id)
 
-## 基础
+## Bean
 
-### Bean
-
-#### IOC & DI
+### IOC & DI
 
 - 依赖注入(DI Dependency Injection)和控制反转(IOC Inversion of Control)是从不同的角度的描述的同一件事情，就是指通过引入IOC容器，利用依赖关系注入的方式，实现对象之间的解耦。
 - DI依赖项注入, 通常是构造或setter
 - BeanWrapper接口, 实例化getbean得到的并不是原实例对象，而是被BeanWrapper包装的bean,存放在CurrentHashmap
 - BeanWrapper根据CustomEditorConfigurer对对象进行属性注入，类型转换
 
-#### bean范围
+### bean范围
 
 bean的范围: Singleton(default)  /  Prototype  /  Session  /  Rquest
 
-#### bean生命周期
+### bean创建及生命周期
 
 ![bean生命周期](./img/beanLifeCycle.jpg)
 
@@ -58,6 +55,16 @@ bean的范围: Singleton(default)  /  Prototype  /  Session  /  Rquest
 11. 调用DisposableBean的destory()
 12. 调用自定义销毁方法
 13. 结束
+
+spring创建Bean的重点步骤这里面体现了：
+
+1、根据class生成Bean定义
+
+2、根据Bean进行实例化
+
+3、将实例的Bean属性进行填充(autowired的属性实例化),Bean初始化和Bean增强
+
+4、完成Bean对象的创建
 
 ```java
 @SuppressWarnings("unchecked")
@@ -215,22 +222,77 @@ protected <T> T doGetBean(String name, @Nullable Class<T> requiredType, @Nullabl
 18. 容器级生命周期接口方法：在上图中带“★” 的步骤是由 InstantiationAwareBean PostProcessor 和 BeanPostProcessor 这两个接口实现，一般称它们的实现类为“ 后处理器” 。 后处理器接口一般不由 Bean 本身实现，它们独立于 Bean，实现类以容器附加装置的形式注册到 Spring 容器中并通过接口反射为 Spring 容器预先识别。当Spring 容器创建任何 Bean 的时候，这些后处理器都会发生作用，所以这些后处理器的影响是全局性的。当然，用户可以通过合理地编写后处理器，让其仅对感兴趣Bean 进行加工处理
 19. ApplicationContext 和 BeanFactory 另一个最大的不同之处在于：ApplicationContext会利用 Java 反射机制自动识别出配置文件中定义的 BeanPostProcessor、 InstantiationAwareBeanPostProcessor 和 BeanFactoryPostProcessor，并自动将它们注册到应用上下文中；而后者需要在代码中通过手工调用 addBeanPostProcessor()方法进行注册。这也是为什么在应用开发时，我们普遍使用 ApplicationContext 而很少使用 BeanFactory 的原因之一
 
-#### 对象交给spring管理的3种方式及应用
+### 对象交给Spring管理 与 类交给Spring管理(千万要注意他们的区别)
+
+[" 原文链接,点击这里 (把对象交给spring管理的3种方法及经典应用) "](https://mp.weixin.qq.com/s?__biz=MzUzNjAxODg4MQ==&mid=2247485613&idx=1&sn=a13f157059b2d6a2e00e5cec4152b315&chksm=fafde203cd8a6b157cd414c51c104d2e7759f9c2d9ddc2f4191918e0523975e65ef826a84359&scene=21#wechat_redirect)
+
+在spring里采用注解方式@Service、@Component这些，实际上管理的是类，把这些类交给spring来负责实例化。
+
+而对象交给spring管理，举个例子，最常见的在配置文件里定义一个bean，或者JavaConfig的方式就是在@Configure标签标注的类里的@Bean对象。这些Bean已经new出来了。是以对象实例的方式交给spring管理的。这些对象往往是与业务无关的基础组件。比如datasource的bean、redis连接池的bean。个数是有限的。
 
 1. xml配置
-2. @bean
+    - `<bean id="car" class="com.lm.spring.bean.Car">` 相当于Car car = new Car() 然后 注册car到spring容器。用的时候直接用。
+2. @bean : 本质和XML配置方法相同。所有用XML配置文件的方法都可以用这个方法改写。
+
+    ```java
+      @Configuration //此处为配置项
+      public class ServiceConfig {
+          @Bean //此处返回的是一个Spring的配置Bean，与xml的<bean>等价
+          public IMessageService getMessageService() {//方法名称随便写
+              return new MessgeServiceImpl();
+          }
+      }
+    ```
+
 3. BeanFacoty registerSingleton
+   - 这时候大家是否会有个疑问，XML配置Bean是传统的spring mvc里常用的将对象交给spring来管理的方法，@Bean是spring boot里将对象交给spring来管理的方法。那为什么还要有这个先实现BeanFactoryPostProcessor的方法呢？
+   - 因为这种方法可以用来做这件事情，但是不仅仅可以做这件事情。它神通广大，不仅可以将一个对象交给spring管理，还可以将已经交给spring管理的对象拿出来进行修改，还有其他各种的spring初始化的干预都可以做。所以用它来仅仅注册一个Bean有点杀鸡用牛刀的味道。
 
-- 类@Component实现BeanFactoryPostPrcessor,并重写postProcessBeanFactory方法，编写对象，用configurableListableBeanFactory.registerSingleton("user", user1)注册;
-- BeanFactoryPostPrcessor：不仅可以将一个对象交给spring管理，还可以将已经交给spring管理的对象拿出来进行修改，还有其他各种的spring初始化的干预都可以做。
+    ```java
+    // 先上代码，定义一个普通Bean。
+    @Data
+    public class User {
+        private Integer id;
+        private String name;
+        private String password;
+        private Integer age;
+    }
 
-#### 三级缓存
+    // 定义一个被spring可以扫描的类，这个类要实现 BeanFactoryPostProcessor。里面调用registerSingleton注册一个对象。
+
+    @Component
+    public class MyBeanFacoty implements BeanFactoryPostProcessor {
+        @Override
+        public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
+            User user1 = new User();
+            user1.setId(1);
+            user1.setName("贾元春");
+            user1.setAge(27);
+            configurableListableBeanFactory.registerSingleton("user", user1);
+        }
+    }
+
+    // 之后就可以随时进行依赖了。
+
+    @RestController
+    public class JacksonController {
+        @Resource
+        private User user;
+        @GetMapping("/writeStringAsString")
+        public String writeStringAsString(String toWrite) throws Exception {
+            System.out.println(user.getAge());
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(toWrite);
+        }
+    ```
+
+### 三级缓存
 
 spring三级缓存简略版：循环依赖时
 
 1. Map singletonObjects一级: 用来存放已经完全创建好的单例 bean，beanName->bean 实例
-2. Map earlySingletonObjects二级: 用来存放早期的bean,未创建完成但是被引用的对象;
-3. Map> singletonFactories三级: 用来存放单例bean的 ObjectFactory,未创建完成但是引用了别的bean B的bean A,正在等待bean B 创建完成
+2. Map earlySingletonObjects二级: 用来存放早期半成品的bean,未创建完成但是被引用的对象,但是会把接口实例化导致报错
+3. Map> singletonFactories三级: 用来存放单例bean的 ObjectFactory,未创建完成但是引用了别的bean B的bean A,正在等待bean B 创建完成,并且接口实例化也是存放在这里面
    - 只能解决setter注入的循环依赖,构造器无法解决
    - 当某个 bean 进入到 2 级缓存的时候，说明这个 bean 的早期对象被其他 bean 注入了，也就是说，这个 bean 还是半成品，还未完全创建好的时候，已经被别人拿去使用了，所以必须要有 3 级缓存，2 级缓存中存放的是早期的被别人使用的对象，如果没有 2 级缓存，是无法判断这个对象在创建的过程中，是否被别人拿去使用了。
 4. 三级缓存的作用：是为了判断循环依赖的时候，早期暴露出去已经被别人使用的 bean 和最终的 bean 是否是同一个 bean，如果不是同一个则弹出异常，如果早期的对象没有被其他 bean 使用，而后期被修改了，不会产生异常，如果没有三级缓存，是无法判断是否有循环依赖，且早期的 bean 被循环依赖中的 bean 使用了
@@ -238,7 +300,7 @@ spring三级缓存简略版：循环依赖时
    - earlySingletonObjects   二级缓存，存放提前暴露的Bean，Bean 是不完整的，未完成属性注入和执行 初始化（init） 方法。
    - singletonFactories  三级缓存，存放的是 Bean 工厂，主要是生产 Bean，存放到二级缓存中。
 
-#### 自动配置原理
+### 自动配置原理
 
 1. @SpringBootApplication复合注解或派生注解
    - @SpringBootConfiguration
@@ -261,7 +323,7 @@ spring三级缓存简略版：循环依赖时
 | 8. 比AspectJ慢                                    | 8. 更好的性能                                                  |
 | 9. 易于学习和应用                                 | 9. 比Spring Aop复杂                                            |
 
-#### 环绕通知
+### 环绕通知
 
 - @Before
 - @After
@@ -271,7 +333,7 @@ spring三级缓存简略版：循环依赖时
 - jdk动态代理 只能对实现了接口的类进行代理
 - cglib 全都可以 对指定的类生成一个子类，覆盖其中的方法
 
-#### 事务
+### 事务
 
 最好将事务添加在Service层, 单条SELECT SQL语句可不开启事务，多条SELECT SQL语句，并且多条SELECTSQL语句的查询结果有关联，比如用作统计、报表等功能，要求开启事务。但是为了提高效率，建议只读事务
 
@@ -279,7 +341,7 @@ spring三级缓存简略版：循环依赖时
 - Required / Required_new
 - @Transactional(rollbackFor = Exception.class)
 
-## SpringMVC
+## SpringMVC(Restful之后普通的mvc流程已经不太符合了!)
 
 ![请求到响应的过程](./img/FeignRequest.png)
 
