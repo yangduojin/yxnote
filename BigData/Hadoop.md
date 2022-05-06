@@ -5,7 +5,7 @@
     - [用户权限](#用户权限)
     - [配置与安装](#配置与安装)
     - [hadoop配置文件](#hadoop配置文件)
-  - [启动集群](#启动集群)
+    - [启动停止集群,myhadoop,jpsall](#启动停止集群myhadoopjpsall)
   - [HDFS](#hdfs)
   - [MapReduce](#mapreduce)
   - [YARN](#yarn)
@@ -269,7 +269,7 @@ SSH
 - vim /opt/module/hadoop-3.1.3/etc/hadoop/workers (垂直添加hadoop102 hadoop103 hadoop104,注意：该文件中添加的内容结尾不允许有空格，文件中不允许有空行。)
 - xsync /opt/module/hadoop-3.1.3/etc (同步所有节点配置文件)
 
-## 启动集群
+### 启动停止集群,myhadoop,jpsall
 
 如果集群是第一次启动，需要在hadoop102节点格式化NameNode（注意：格式化NameNode，会产生新的集群id，导致NameNode和DataNode的集群id不一致，集群找不到已往数据。如果集群在运行过程中报错，需要重新格式化NameNode的话，一定要先停止namenode和datanode进程，并且要删除所有机器的data和logs目录，然后再进行格式化。）
 
@@ -286,7 +286,7 @@ SSH
 - mapred --daemon start historyserver
 - hadoop fs -rm -r /output  (删除HDFS上已经存在的输出文件)
 
-## HDFS
+启动/停止
 
 - start-dfs.sh/stop-dfs.sh  整体启动/停止HDFS
 - start-yarn.sh/stop-yarn.sh  整体启动/停止YARN
@@ -350,7 +350,14 @@ SSH
   done
   ```
 
-- **主机器ntpd时间服务器配置（必须root用户）**
+|常用端口名称(面试)| Hadoop2.x | Hadoop3.x|
+|---|--|--|
+|NameNode内部通信端口| 8020 / 9000 | 8020 / 9000 / 9820|
+|NameNode HTTP UI| 50070 | 9870|
+|MapReduce查看执行任务端口| 8088| 8088|
+|历史服务器通信端口| 19888| 19888|
+
+- **主机器ntpd时间服务器配置（必须root用户）虚拟机不用配:-(**
   1. sudo systemctl status ntpd
   2. sudo systemctl start ntpd
   3. sudo systemctl is-enabled ntpd
@@ -374,6 +381,19 @@ SSH
   4. ``*/1* ** * /usr/sbin/ntpdate hadoop102``
   5. sudo date -s "2021-9-11 11:11:11" 随意修改时间
   6. sudo date
+
+## HDFS
+
+|名称|章节|内容|
+|--|--|--|
+|HDFS|概述|HDFS的产生背景和定义,优缺点,组成,文件块大小|
+||HDFD的shell相关操作|开发的重点|
+||HDFS的客户端api|数据的上传和下载|
+||HDFS的读写流程|面试重点|
+||NN和2NN|高可用只用NN,不要2NN|
+||Datanode工作机制|了解|
+
+![HDFS的组成架构](./img/hdfsarchitecture.png)
 
 ## MapReduce
 
