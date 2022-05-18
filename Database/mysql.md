@@ -1019,28 +1019,28 @@ Index Condition Pushdown
 
 1. Id: 显示一个id序列号表示表的独立查询次数,数字大的优先执行,数字相同的从上往下执行,一个sql查询到数次越少越好(回表?)
 2. select_type:
-   - SIMPLE: 简单的 select 查询,查询中不包含子查询或者UNION
-   - PRIMARY: 查询中若包含任何复杂的子部分，最外层查询则被标记为Primary
-   - DERIVED: 在FROM列表中包含的子查询被标记为DERIVED(衍生),MySQL会递归执行这些子查询, 把结果放在临时表里。
-   - SUBQUERY:依赖查询，在SELECT或WHERE列表中包含了子查询,子查询基于外层
-   - UNCACHEABLE SUBQUREY: 不可用缓存子查询@@sort是系统变量 随时都可能会变化 缓存不可用
-   - UNION: 若第二个SELECT出现在UNION之后，则被标记为UNION；
-   - 若UNION包含在FROM子句的子查询中,外层SELECT将被标记为：DERIVED
-   - UNION RESULT: 从UNION表获取结果的SELECT
+   1. SIMPLE: 简单的 select 查询,查询中不包含子查询或者UNION
+   1. PRIMARY: 查询中若包含任何复杂的子部分，最外层查询则被标记为Primary
+   1. DERIVED: 在FROM列表中包含的子查询被标记为DERIVED(衍生),MySQL会递归执行这些子查询, 把结果放在临时表里。
+   1. SUBQUERY:依赖查询，在SELECT或WHERE列表中包含了子查询,子查询基于外层
+   1. UNCACHEABLE SUBQUREY: 不可用缓存子查询@@sort是系统变量 随时都可能会变化 缓存不可用
+   1. UNION: 若第二个SELECT出现在UNION之后，则被标记为UNION；
+   1. 若UNION包含在FROM子句的子查询中,外层SELECT将被标记为：DERIVED
+   1. UNION RESULT: 从UNION表获取结果的SELECT
 3. Table: 显示这一行的数据是关于哪张表的
 4. partitions: 代表分区表中的命中情况，非分区表，该项为null
 5. Type(优化type只是一方面，主要还是看key_len和rows来判断优化效率)
-   - system:表仅有一行，这是const类型的特列(等于系统表),很少出现可忽略不计
-   - const：表示通过索引一次就找到了,const用于比较primary key或者unique索引。因 为只匹配一行数据，所以很快如。将主键置于where列表中，MySQL就能    将该查询转换为一个常量
-   - eq_ref：唯一性索引扫描，对于每个索引键，表中只有一条记录与之匹配。常见于主键或唯一索引扫描
-   - Ref: 非唯一性索引扫描，返回匹配某个单独值的所有行.本质上也是一种索引访问，它返回所有匹配某个单独值的行，然而它可能会找到多个符合条件的行，所以他应该属于查找和扫描的混合体
-   - ref_or_null: 对于某个字段要么为空要么为某个值（前五个是理想状况）
-   - index_merge: 在查询过程中需要多个索引组合使用，通常出现在有 or 的关键字的sql中。
-   - unique_subquery: 该联接类型类似于index_subquery。 子查询中的唯一索引
-   - index_subquery: 利用索引来关联子查询，不再全表扫描。
-   - range: 只检索给定范围的行,使用一个索引来选择行
-   - index: 是sql使用了索引但是没有通过索引进行过滤，一般是使用了覆盖索引或者是利用索引进行了排序分组
-   - ALL:Full Table Scan，将遍历全表以找到匹配的行(性能最差)
+   1. `system`:表仅有一行，这是const类型的特列(等于系统表),很少出现可忽略不计
+   1. `const`: 表示通过索引一次就找到了,const用于比较primary key或者unique索引。因 为只匹配一行数据，所以很快如。将主键置于where列表中，MySQL就能    将该查询转换为一个常量
+   1. `eq_ref`: 唯一性索引扫描，对于每个索引键，表中只有一条记录与之匹配。常见于主键或唯一索引扫描
+   1. `Ref`: 非唯一性索引扫描，返回匹配某个单独值的所有行.本质上也是一种索引访问，它返回所有匹配某个单独值的行，然而它可能会找到多个符合条件的行，所以他应该属于查找和扫描的混合体
+   1. `ref_or_null`: 对于某个字段要么为空要么为某个值（前五个是理想状况）
+   1. `index_merge`: 在查询过程中需要多个索引组合使用，通常出现在有 or 的关键字的sql中。
+   1. `unique_subquery`: 该联接类型类似于index_subquery。 子查询中的唯一索引
+   1. `index_subquery`: 利用索引来关联子查询，不再全表扫描。
+   1. `range`: 只检索给定范围的行,使用一个索引来选择行
+   1. `index`: 是sql使用了索引但是没有通过索引进行过滤，一般是使用了覆盖索引或者是利用索引进行了排序分组
+   1. `ALL`: Full Table Scan，将遍历全表以找到匹配的行(性能最差)
 6. possible_keys: 可能应用在这张表中的索引，一个或多个。
 7. Key: 实际使用的索引。如果为NULL，则没有使用索引,查询中若使用了覆盖索引，则该索引和查询的select字段重叠
 8. key_len: Where条件后面的筛选条件命中的索引长度,可能前面的字段用了索引，后面的没用，一般数字越大越好，证明使用的索引多
