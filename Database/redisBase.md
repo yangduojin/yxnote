@@ -256,6 +256,8 @@
 
 ## 分布式锁
 
+[字节-聊聊分布式锁](https://mp.weixin.qq.com/s/-N4x6EkxwAYDGdJhwvmZLw)
+
 lua make (compare and set)
 
 ``set + nx + ex`` 原子性只有一个能拿到锁

@@ -37,6 +37,8 @@ changebuffer 只是针对二级索引的页的优化
 表中如果有一个字段内容是{xx:yyy,aa:bb},它是不能直接通过select 查询赋值给pojo的map(集合)类型，解决方法: 通过级联查询 多表嵌套  
 将该字段转存入pojo中一个string字段，将该字段用JSON.parseObject(str,Map.class)转为一个map，再存入pojo的map属性字段
 
+[字节-慢 SQL 分析与优化](https://mp.weixin.qq.com/s/CaSVhAJgycjjbCxAkII2ZA)
+
 ## MyISAM/InnoDB/约束分类
 
 mysql数据库由后台线程和一个共享内存区组成
